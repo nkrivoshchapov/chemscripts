@@ -1,5 +1,5 @@
 import multiprocessing, threading, subprocess, time, os, ntpath
-from . import utils
+from myscripts import utils
 
 MAXPROC = 22
 MAXTRIES = 3
@@ -15,6 +15,15 @@ def get_next_task(todo_files):
 
 
 def gauss_driver(todo_files, todo_lock, done_files, done_lock):
+    # Items in todo_files may be:
+    #   1) Names of gjf files (calculation with rung)
+    #   2) Names of *.47 files (calculation with NBO6)
+    #   3) Dicts with keys:
+    #       'command' - required
+    #       'nproc' - required
+    #       'wd' - required
+    #       'resfile' - optional (for check of successful termination)
+    
     procs = []
     nfiles = 0
     termination_mode = False
@@ -26,17 +35,23 @@ def gauss_driver(todo_files, todo_lock, done_files, done_lock):
     while nfiles > 0 or len(procs) > 0 or not termination_mode:
         for i in reversed(range(len(procs))):
             if not procs[i]['proc'].poll() == None:
-                if utils.is_normal_termination(procs[i]['logfile']):
-                    # print("Normal termination of " + procs[i]['logfile'])
+                if utils.is_normal_termination(procs[i]['logfile'], procs[i]['logfile']):
                     with done_lock:
                         done_files.append(procs[i]['inpfile'])
                 else:
                     print("Not normal termination of " + procs[i]['logfile'])
-                    todo_files.append(procs[i]['inpfile'])
-                    if procs[i]['inpfile'] not in ntries:
-                        ntries[procs[i]['inpfile']] = 1
+                    if type(procs[i]['inpfile']) is dict:
+                        ntries_key = procs[i]['inpfile']['command']
                     else:
-                        ntries[procs[i]['inpfile']] += 1
+                        ntries_key = procs[i]['inpfile']
+                    
+                    if ntries_key not in ntries:
+                        ntries[ntries_key] = 1
+                    else:
+                        ntries[ntries_key] += 1
+                    
+                    with todo_lock:
+                        todo_files.append(procs[i]['inpfile'])
                 occupied_proc -= procs[i]['nproc']
                 del procs[i]
 
@@ -58,16 +73,22 @@ def gauss_driver(todo_files, todo_lock, done_files, done_lock):
                 print("Enabled termination mode")
                 termination_mode = True
             else:
-                tempwd = os.path.dirname(calc_file)
+                if type(calc_file) is dict:
+                    tempwd = calc_file['wd']
+                    if "resfile" not in calc_file.keys():
+                        calc_file["resfile"] = None
+                elif isinstance(calc_file, str):
+                    tempwd = os.path.dirname(calc_file)
+                    
                 mainwd = os.getcwd()
                 os.chdir(tempwd)
                 if calc_file.endswith('.gjf'):
-                    procs.append({
+                    procs.append({ # TODO Make them shorter
                                     'proc': subprocess.Popen("rung " + ntpath.basename(calc_file), shell = True),
                                     'inpfile': calc_file,
                                     'logfile': calc_file.replace('.gjf', '.log'),
                                     'wd': tempwd,
-                                    'nproc': curnproc
+                                    'nproc': curnproc,
                                  })
                 elif calc_file.endswith('.47'):
                     procs.append({
@@ -75,7 +96,15 @@ def gauss_driver(todo_files, todo_lock, done_files, done_lock):
                                     'inpfile': calc_file,
                                     'logfile': calc_file.replace('.47', '_NBO.out'),
                                     'wd': tempwd,
-                                    'nproc': curnproc
+                                    'nproc': curnproc,
+                                 })
+                elif type(calc_file) is dict:
+                    procs.append({
+                                    'proc': subprocess.Popen(calc_file["command"], shell = True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL),
+                                    'inpfile': calc_file,
+                                    'logfile': calc_file["resfile"],
+                                    'wd': tempwd,
+                                    'nproc': curnproc,
                                  })
                 os.chdir(mainwd)
                 occupied_proc += curnproc

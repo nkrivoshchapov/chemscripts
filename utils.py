@@ -188,15 +188,20 @@ def parse_xyz(filename):
         syms.append(parts[0])
     return xyzs, syms
 
-def is_normal_termination(name):
-    if name.endswith(".log"):
-        lines = open(name, 'r').readlines()
+def is_normal_termination(logname, inpfile):
+    if inpfile.endswith(".log") and logname.endswith(".log"):
+        lines = open(logname, 'r').readlines()
         for line in reversed(lines):
             if "Normal termination" in line:
                 return True
         return False
-    elif name.endswith("_NBO.out"):
+    elif inpfile.endswith(".47") and logname.endswith("_NBO.out"):
         return True
+    elif type(calc_file) is dict:
+        if logname is not None:
+            return os.path.isfile(logname) # TODO May check if filesize>0
+        else:
+            return True
 
 def get_dihedral(atom_idx, xyzs):
     points = [xyzs[i-1] for i in atom_idx]
@@ -252,3 +257,7 @@ def getnproc(inpfile):
                 return int(line.replace('\n', '').split('=')[1])
     elif inpfile.endswith(".47"):
         return 1
+    elif type(inpfile) is dict:
+        return inpfile['nproc']
+    else:
+        raise Exception("Cannot obtain nproc. Unknown calctype.")
