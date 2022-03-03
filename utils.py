@@ -189,7 +189,12 @@ def parse_xyz(filename):
     return xyzs, syms
 
 def is_normal_termination(logname, inpfile):
-    if inpfile.endswith(".gjf") and logname.endswith(".log"):
+    if type(inpfile) is dict:
+        if logname is not None:
+            return os.path.isfile(logname) # TODO May check if filesize>0
+        else:
+            return True
+    elif inpfile.endswith(".gjf") and logname.endswith(".log"):
         lines = open(logname, 'r').readlines()
         for line in reversed(lines):
             if "Normal termination" in line:
@@ -197,11 +202,6 @@ def is_normal_termination(logname, inpfile):
         return False
     elif inpfile.endswith(".47") and logname.endswith("_NBO.out"):
         return os.path.isfile(logname)
-    elif type(inpfile) is dict:
-        if logname is not None:
-            return os.path.isfile(logname) # TODO May check if filesize>0
-        else:
-            return True
 
 def get_dihedral(atom_idx, xyzs):
     points = [xyzs[i-1] for i in atom_idx]
@@ -250,14 +250,14 @@ def wait_for_termination(gjffiles_orig, gdriver):
         time.sleep(1)
 
 def getnproc(inpfile):
-    if inpfile.endswith(".gjf"):
+    if type(inpfile) is dict:
+        return inpfile['nproc']
+    elif inpfile.endswith(".gjf"):
         lines = open(inpfile, 'r').readlines()
         for line in lines:
             if line.lower().startswith('%nprocs'):
                 return int(line.replace('\n', '').split('=')[1])
     elif inpfile.endswith(".47"):
         return 1
-    elif type(inpfile) is dict:
-        return inpfile['nproc']
     else:
         raise Exception("Cannot obtain nproc. Unknown calctype.")

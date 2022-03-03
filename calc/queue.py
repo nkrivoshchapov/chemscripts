@@ -70,8 +70,11 @@ def gauss_driver(todo_files, todo_lock, done_files, done_lock):
                 calc_file = todo_files.pop(0)
                 curnproc = next_task[1]
                 next_task = get_next_task(todo_files)
-
-            if calc_file in ntries and ntries[calc_file] > MAXTRIES:
+            
+            if type(calc_file) is dict:
+                if calc_file['command'] in ntries and ntries[calc_file['command']] > MAXTRIES:
+                    continue
+            elif calc_file in ntries and ntries[calc_file] > MAXTRIES:
                 continue
 
             if calc_file == "Done":
@@ -87,7 +90,15 @@ def gauss_driver(todo_files, todo_lock, done_files, done_lock):
                     
                 mainwd = os.getcwd()
                 os.chdir(tempwd)
-                if calc_file.endswith('.gjf'):
+                if type(calc_file) is dict:
+                    procs.append({
+                                    'proc': subprocess.Popen(calc_file["command"], shell = True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL),
+                                    'inpfile': calc_file,
+                                    'logfile': calc_file["resfile"],
+                                    'wd': tempwd,
+                                    'nproc': curnproc,
+                                 })
+                elif calc_file.endswith('.gjf'):
                     procs.append({ # TODO Make them shorter
                                     'proc': subprocess.Popen("rung " + ntpath.basename(calc_file), shell = True),
                                     'inpfile': calc_file,
@@ -103,16 +114,9 @@ def gauss_driver(todo_files, todo_lock, done_files, done_lock):
                                     'wd': tempwd,
                                     'nproc': curnproc,
                                  })
-                elif type(calc_file) is dict:
-                    procs.append({
-                                    'proc': subprocess.Popen(calc_file["command"], shell = True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL),
-                                    'inpfile': calc_file,
-                                    'logfile': calc_file["resfile"],
-                                    'wd': tempwd,
-                                    'nproc': curnproc,
-                                 })
                 os.chdir(mainwd)
                 occupied_proc += curnproc
+                # print("Added %d procs. Totally occupied %d procs." % (curnproc, occupied_proc))
             with todo_lock:
                 nfiles = len(todo_files)
         with todo_lock:
