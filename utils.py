@@ -189,15 +189,15 @@ def parse_xyz(filename):
     return xyzs, syms
 
 def is_normal_termination(logname, inpfile):
-    if inpfile.endswith(".log") and logname.endswith(".log"):
+    if inpfile.endswith(".gjf") and logname.endswith(".log"):
         lines = open(logname, 'r').readlines()
         for line in reversed(lines):
             if "Normal termination" in line:
                 return True
         return False
     elif inpfile.endswith(".47") and logname.endswith("_NBO.out"):
-        return True
-    elif type(calc_file) is dict:
+        return os.path.isfile(logname)
+    elif type(inpfile) is dict:
         if logname is not None:
             return os.path.isfile(logname) # TODO May check if filesize>0
         else:

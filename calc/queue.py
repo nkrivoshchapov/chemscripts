@@ -35,9 +35,14 @@ def gauss_driver(todo_files, todo_lock, done_files, done_lock):
     while nfiles > 0 or len(procs) > 0 or not termination_mode:
         for i in reversed(range(len(procs))):
             if not procs[i]['proc'].poll() == None:
-                if utils.is_normal_termination(procs[i]['logfile'], procs[i]['logfile']):
-                    with done_lock:
-                        done_files.append(procs[i]['inpfile'])
+                if utils.is_normal_termination(procs[i]['logfile'], procs[i]['inpfile']):
+                    print("Normal termination of " + procs[i]['logfile'])
+                    if type(procs[i]['inpfile']) is dict:
+                        with done_lock:
+                            done_files.append(procs[i]['inpfile']['command'])
+                    else:
+                        with done_lock:
+                            done_files.append(procs[i]['inpfile'])
                 else:
                     print("Not normal termination of " + procs[i]['logfile'])
                     if type(procs[i]['inpfile']) is dict:
