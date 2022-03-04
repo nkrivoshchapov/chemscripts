@@ -1,5 +1,6 @@
 import numpy as np
 import os, copy, time
+from numpy.linalg import norm
 
 
 DEG2RAD = 0.0174532925199432957692
@@ -226,6 +227,23 @@ def get_dihedral(atom_idx, xyzs):
     if np.linalg.det(np.array([fr1_side, fr1_mid, fr2_side])) < 0:
         ang = -ang
     return ang * RAD2DEG
+
+def get_angle(points=None, dirs=None):
+    if points is not None:
+        prevvec = points[0]
+        curvec = points[1]
+        nextvec = points[2]
+        dir1 = prevvec - curvec
+        dir2 = nextvec - curvec
+    elif dirs is not None:
+        dir1 = dirs[0]
+        dir2 = dirs[1]
+    else:
+        raise Exception("Invalid call of get_angle")
+    dir1 /= norm(dir1)
+    dir2 /= norm(dir2)
+    angle = np.arccos(np.dot(dir1, dir2))
+    return angle * RAD2DEG
 
 def checkout_directory(dirname):
     if not os.path.isdir(dirname):

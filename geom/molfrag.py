@@ -42,6 +42,12 @@ class Molecule:
     def remove_bond(self, a, b):
         self.G.remove_edge(a - 1, b - 1)
 
+    def has_bond(self, a, b):
+        return self.G.has_edge(a - 1, b - 1)
+
+    def xyz(self, i):
+        return self.G.nodes[i - 1]['xyz']
+
 
 class Fragment:
     def __init__(self, mol, startatom):

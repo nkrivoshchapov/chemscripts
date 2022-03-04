@@ -1,5 +1,6 @@
 import numpy as np
-import mcubes
+import mcubes, sklearn
+import glob
 
 from myscripts.utils import wait_for_termination
 
@@ -127,3 +128,21 @@ def generate_isosurface(cubename, meshfile_template, ival):
             np.save(f, edges)
         with open(meshfile_template.format(sign=mode['name'], type='triangles'), 'wb') as f:
             np.save(f, triangles)
+
+
+def get_nbo_direction(surfnames):
+    vertices = []
+    for surfname in glob.glob(surfnames.format(type='vertices')):
+        curvertices = list(np.load(surfname.format(type='vertices')))
+        vertices += curvertices
+
+    center = np.zeros(3)
+    for v in vertices:
+        center += v
+    center /= len(center)
+
+    for item in vertices:
+        item -= center
+    pca = sklearn.decomposition.PCA(3)
+    pca.fit(vertices)
+    return pca.components_[0]
