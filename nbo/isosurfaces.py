@@ -1,6 +1,7 @@
-from myscripts.utils import wait_for_termination
 import numpy as np
 import mcubes
+
+from myscripts.utils import wait_for_termination
 
 
 def nbo_to_idx(nbo, reorder_nbo):
@@ -8,7 +9,7 @@ def nbo_to_idx(nbo, reorder_nbo):
 
 
 CUBENPROC = 6
-def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger): 
+def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger, wait=False):
     # cubename is expected to have {nbo} at least in cases when len(nbo_indices) > 1
     logger.info("Processing logfile " + logname)
     reorder_nbo = []
@@ -19,7 +20,7 @@ def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger)
             for part in parts:
                 reorder_nbo.append(int(part))
 
-    commandlines = []
+    waittasks = []
     cubefiles = []
     for nbo in nbo_indices:
         if "{nbo}" in cubename:
@@ -31,8 +32,8 @@ def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger)
         logger.info("Generating cubefile %s" % newcube)
         command = 'cubegen {nproc} MO={corr_idx} {fchk} {cube} 150'.format(
             nproc=CUBENPROC, corr_idx=nbo_to_idx(nbo, reorder_nbo), fchk=fchkname, cube=newcube)
-        commandlines.append(command)
-        # print("Commandline: " + command)
+        waittasks.append(command)
+
         with gdriver['todo_lock']:
             gdriver['todo_files'].append({
                                             'command': command,
@@ -40,7 +41,9 @@ def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger)
                                             'nproc': CUBENPROC,
                                             'resfile': newcube,
                                          })
-    wait_for_termination(commandlines, gdriver)
+    if wait:
+        wait_for_termination(waittasks, gdriver)
+    return waittasks
 
 
 BOHR2A = 0.529177
