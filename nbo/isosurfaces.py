@@ -1,5 +1,3 @@
-import subprocess, time, os, glob
-from myscripts.mylogging import createLogger
 from myscripts.utils import wait_for_termination
 import numpy as np
 import mcubes
@@ -110,16 +108,19 @@ def generate_isosurface(cubename, meshfile_template, ival):
             v[2] = (origin[2] + v[2] * frame_data['z']['step']) * BOHR2A
         edges = []
         for t in triangles:
-            if set((t[0], t[1])) not in edges:
-                edges.append(set((t[0], t[1])))
-            if set((t[0], t[2])) not in edges:
-                edges.append(set((t[0], t[2])))
-            if set((t[1], t[2])) not in edges:
-                edges.append(set((t[1], t[2])))
+            if {t[0], t[1]} not in edges:
+                edges.append({t[0], t[1]})
+            if {t[0], t[2]} not in edges:
+                edges.append({t[0], t[2]})
+            if {t[1], t[2]} not in edges:
+                edges.append({t[1], t[2]})
         for i in range(len(edges)):
             edges[i] = tuple(edges[i])
         edges = np.array(edges).astype('int32')
         triangles = triangles.astype('int32')
-        np.savetxt(meshfile_template.format(sign=mode['name'], type='vertices'), vertices)
-        np.savetxt(meshfile_template.format(sign=mode['name'], type='edges'), edges, fmt='%i')
-        np.savetxt(meshfile_template.format(sign=mode['name'], type='triangles'), triangles, fmt='%i')
+        with open(meshfile_template.format(sign=mode['name'], type='vertices'), 'wb') as f:
+            np.save(f, vertices)
+        with open(meshfile_template.format(sign=mode['name'], type='edges'), 'wb') as f:
+            np.save(f, edges)
+        with open(meshfile_template.format(sign=mode['name'], type='triangles'), 'wb') as f:
+            np.save(f, triangles)
