@@ -11,12 +11,15 @@ class NBOLogParser:
         self.NBOs = [] # Elements are dicts
                        # Keys: 'index' (starts with 1), 'name'
         self.parse_log(logfile)
+        self.nbasis = len(self.NBOs)
 
     def parse_log(self, file):
         raise Exception(NotImplementedError)
 
     def find_by_regex(self, pattern):
-        pattern = re.compile(pattern)
+        if isinstance(pattern, str):
+            pattern = re.compile(pattern)
+        assert isinstance(pattern, re.Pattern)
         result = []
         for nbo in self.NBOs:
             if re.search(pattern, nbo['name']):

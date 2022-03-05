@@ -42,11 +42,7 @@ def parse_log(logname):
 
     for line in rline[start+5 : end] :
         words = line.split()
-        try:
-            word1 = int(words[1])
-        except Exception as e:
-            print("Problem with " + file + "\n" + str(e))
-            break
+        word1 = int(words[1])
         word3 = str(words[3])
 
         if   word1 ==   1 : word1 = "H"

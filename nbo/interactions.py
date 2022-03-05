@@ -1,6 +1,7 @@
 import sys, os, glob, ntpath, re
 import numpy as np
 
+from .logparsers import NBO3LogParser, NBO6LogParser
 
 START_RE = re.compile(r"\(occupancy\).*bond.*orbital.*\/.*coefficients.*\/.*hybrids", re.IGNORECASE)
 END_RE = re.compile("nho.*directionality.*and.*bond.*bending", re.IGNORECASE)
@@ -126,99 +127,104 @@ class NboSymmMatrix:
         self.cur_col += 1
 
 
-def get_scf_energy(lines):
-    for line in reversed(lines):
-        if "SCF Done" in line:
-            return float(line.split('=')[1].split('A.U.')[0])
-
-
-def get_deletion_energy(logfile):
-    lines = open(logfile, "r").readlines()
-    for line in reversed(lines):
-        if "Energy of deletion :" in line:
-            return float(line.split(':')[1].replace('\n', ''))
-
-
 class NboCalculation:
-    def __init__(self, logname, keys, donor_patterns, acceptor_patterns):
-        self.donor_patterns = donor_patterns
-        self.acceptor_patterns = acceptor_patterns
-        self.keys = keys
-        self.logname = logname
-        self.molname = ntpath.basename(logname).split('.')[0].split('_')[0]
-        self.nbo47name = logname.replace('.log', '.47')
-        self.fnboname = logname.replace('.log', '.fnbo')
-        self.dmnboname = logname.replace('.log', '.dmnbo')
-        self.aonboname = logname.replace('.log', '.aonbo')
-        self.nbooutname = logname.replace('.log', '.out')
-        self.delname = logname.replace('_nbo.log', '_del.log')
+    def __init__(self, nboname):
+        self.nboname = nboname # Either log of g16/nbo3 calculation or nbo6 out-file
 
-    def parse_nbo_info(self, loglines):
-        # Get NBasis
-        self.nbasis = None
-        for line in loglines:
-            if 'NBasis' in line and 'RedAO' in line:
-                self.nbasis = int(line.split('=')[1].split('RedAO')[0])
-                break
-        assert self.nbasis is not None
+        if self.nboname.endswith('.log'):
+            self.parser = NBO3LogParser(self.nboname)
+        elif self.nboname.endswith('.out'):
+            self.parser = NBO6LogParser(self.nboname)
+        self.nbasis = self.parser.nbasis
 
-        # Get NBO symbols
-        start_idx = None
-        end_idx = None
-        nbolines = open(self.nbooutname, 'r').readlines()
-        for i, line in enumerate(nbolines):
-            if re.search(START_RE, line):
-                start_idx = i
-            elif re.search(END_RE, line):
-                end_idx = i
-                break
-        assert start_idx is not None and end_idx is not None
+        if self.nboname.endswith('.log') and os.path.isfile(nboname.replace('.log', '.out')):
+            self.outname = nboname.replace('.log', '.out')
 
-        self.donors = []
-        self.acceptors = []
-        for i, line in enumerate(nbolines[start_idx:end_idx], start=start_idx):
-            for donor_pattern in self.donor_patterns[self.molname]:
-                if re.search(donor_pattern, line):
-                    self.donors.append(int(line.split('.')[0]))
-            for acc_pattern in self.acceptor_patterns[self.molname]:
-                if re.search(acc_pattern, line):
-                    self.acceptors.append(int(line.split('.')[0]))
+        if self.nboname.endswith('.out') and os.path.isfile(nboname.replace('.out', '.log')):
+            self.logname = nboname.replace('.log', '.out')
 
-    def get_df_item(self):
+        if self.nboname.endswith('.log') or hasattr(self, "logname"):
+            self.scfener = self.obtain_scf_energy()
+            # self.chao = NboSymmMatrix(self.nboname, self.nbasis) if self.nboname.endswith('.log') \
+            #             else NboSymmMatrix(self.logname, self.nbasis)
+
+        nbo47name = self.nboname.replace('.log', '.47')
+        if os.path.isfile(nbo47name):
+            self.nbo47name = nbo47name
+            self.fao = NboSymmMatrix(self.nbo47name, self.nbasis, section='$FOCK')
+            self.dmao = NboSymmMatrix(self.nbo47name, self.nbasis, section='$DENSITY')
+
+        fnboname = self.nboname.replace('.log', '.fnbo')
+        if os.path.isfile(fnboname):
+            self.fnboname = fnboname
+            self.fnbo = NboSymmMatrix(self.fnboname, self.nbasis)
+
+        dmnboname = self.nboname.replace('.log', '.dmnbo')
+        if os.path.isfile(dmnboname):
+            self.dmnboname = dmnboname
+            self.dmnbo = NboSymmMatrix(self.dmnboname, self.nbasis)
+
+        aonboname = self.nboname.replace('.log', '.aonbo')
+        if os.path.isfile(aonboname):
+            self.aonboname = aonboname
+            self.aonbo = NboNonSymmMatrix(self.aonboname, self.nbasis)
+
+        delname = self.nboname.replace('_nbo.log', '_del.log')
+        if os.path.isfile(delname):
+            self.delname = delname
+            self.delener = self.obtain_deletion_energy()
+
+    def obtain_scf_energy(self):
+        if self.nboname.endswith('.log'):
+            lines = open(self.nboname, 'r').readlines()
+        elif hasattr(self, "logname"):
+            lines = open(self.logname, 'r').readlines()
+        else:
+            raise Exception(RuntimeError)
+        for line in reversed(lines):
+            if "SCF Done" in line:
+                return float(line.split('=')[1].split('A.U.')[0])
+
+    def obtain_deletion_energy(self):
+        lines = open(self.delname, "r").readlines()
+        for line in reversed(lines):
+            if "Energy of deletion :" in line:
+                return float(line.split(':')[1].replace('\n', ''))
+
+    def get_data(self, keys=("E2_sum",), donor_patterns=(), acceptor_patterns=(), donors=(), acceptors=()):
+        if len(donor_patterns) > 0 and len(acceptor_patterns) > 0:
+            assert len(donors) == 0 and len(acceptors) == 0, "NBO indices and patterns were given simultaniously!"
+            donors = []
+            for donor_pat in donor_patterns:
+                donors += [item['index'] for item in self.parser.find_by_regex(donor_pat)]
+            acceptors = []
+            for acceptor_pat in acceptor_patterns:
+                acceptors += [item['index'] for item in self.parser.find_by_regex(acceptor_pat)]
+
         res = {}
-        loglines = open(self.logname, "r").readlines()
-        self.parse_nbo_info(loglines)
-
-        fao = NboSymmMatrix(self.nbo47name, self.nbasis, section='$FOCK')
-        fnbo = NboSymmMatrix(self.fnboname, self.nbasis)
-        dmao = NboSymmMatrix(self.nbo47name, self.nbasis, section='$DENSITY')
-        dmnbo = NboSymmMatrix(self.dmnboname, self.nbasis)
-        aonbo = NboNonSymmMatrix(self.aonboname, self.nbasis)
-        chao = NboSymmMatrix(self.logname, self.nbasis)
-
-        if 'ScfEner' in self.keys:
-            res['ScfEner'] = get_scf_energy(loglines)
-
-        if 'Del_total' in self.keys:
-            res['Del_total'] = get_deletion_energy(self.delname)
+        if 'ScfEner' in keys:
+            res['ScfEner'] = self.scfener
+        if 'Del_total' in keys:
+            res['Del_total'] = self.delener
 
         for totalkey in TOTAL_KEYS:
-            if totalkey in self.keys:
+            if totalkey in keys:
                 res[totalkey] = 0 # Initialize before summing up
 
         for i in range(self.nbasis):
             for j in range(i):
                 for totalkey in TOTAL_KEYS:
-                    if totalkey in self.keys:
-                        res[totalkey] += INT_FORMULAS[totalkey.split('_')[0]](fnbo, dmnbo, i, j)
+                    if totalkey in keys:
+                        res[totalkey] += INT_FORMULAS[totalkey.split('_')[0]](self.fnbo, self.dmnbo, i, j)
 
         for sumkey in SUM_KEYS:
-            if sumkey in self.keys:
+            if sumkey in keys:
                 res[sumkey] = 0 # Initialize before summing up
 
-        for donor in self.donors:
-            for acceptor in self.acceptors:
+        for donor in donors:
+            for acceptor in acceptors:
                 for sumkey in SUM_KEYS:
-                    if sumkey in self.keys:
-                        res[sumkey] += INT_FORMULAS[sumkey.split('_')[0]](fnbo, dmnbo, donor - 1, acceptor - 1)
+                    if sumkey in keys:
+                        res[sumkey] += INT_FORMULAS[sumkey.split('_')[0]](self.fnbo, self.dmnbo,
+                                                                          donor - 1, acceptor - 1)
         return res
