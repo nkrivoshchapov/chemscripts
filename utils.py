@@ -1,5 +1,5 @@
 import numpy as np
-import os, copy, time
+import os, copy, time, ntpath
 from numpy.linalg import norm
 
 
@@ -204,8 +204,10 @@ def is_normal_termination(logname, inpfile):
     elif inpfile.endswith(".47") and logname.endswith("_NBO.out"):
         return os.path.isfile(logname)
 
-def get_dihedral(atom_idx, xyzs):
-    points = [xyzs[i-1] for i in atom_idx]
+def get_dihedral(atoms=None, xyz=None, points=None):
+    if atoms is not None and xyz is not None:
+        points = [xyz[i-1] for i in atoms]
+    assert points is not None
     fr1_side = points[0] - points[1]
     fr1_mid = points[2] - points[1]
     fr2_mid = -fr1_mid
@@ -249,12 +251,18 @@ def checkout_directory(dirname):
     if not os.path.isdir(dirname):
         os.mkdir(dirname)
 
-def start_calcs(gjffiles, gdriver, wait=True):
+def start_calcs(job_items, gdriver, wait=True):
     with gdriver['todo_lock']:
-        for file in gjffiles:
-            gdriver['todo_files'].append(file)
+        for item in job_items:
+            gdriver['todo_files'].append(item)
     if wait:
-        wait_for_termination(gjffiles, gdriver)
+        wait_items = []
+        for job_item in job_items:
+            if isinstance(job_item, str):
+                wait_items.append(job_item)
+            elif isinstance(job_item, dict):
+                wait_items.append(job_item['command'])
+        wait_for_termination(wait_items, gdriver)
 
 def wait_for_termination(gjffiles_orig, gdriver):
     gjffiles = copy.copy(gjffiles_orig)
@@ -279,3 +287,11 @@ def getnproc(inpfile):
         return 1
     else:
         raise Exception("Cannot obtain nproc. Unknown calctype.")
+
+def get_formchk_call(chkfile):
+    return {
+              'command': "formchk " + ntpath.basename(chkfile),
+              'wd': os.path.dirname(chkfile),
+              'nproc': 1,
+              'resfile': chkfile.replace(".chk", ".fchk"),
+           }

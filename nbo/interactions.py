@@ -161,8 +161,10 @@ class NboCalculation:
                 self.nbasis = int(line.split('=')[1].split('RedAO')[0])
                 break
         assert self.nbasis is not None
-        
+
         # Get NBO symbols
+        start_idx = None
+        end_idx = None
         nbolines = open(self.nbooutname, 'r').readlines()
         for i, line in enumerate(nbolines):
             if re.search(START_RE, line):
@@ -170,9 +172,8 @@ class NboCalculation:
             elif re.search(END_RE, line):
                 end_idx = i
                 break
-        # print("Start line = %d\n line: %s" % (start_idx, repr(nbolines[start_idx])))
-        # print("End line = %d\n line: %s" % (end_idx, repr(nbolines[end_idx])))
-        
+        assert start_idx is not None and end_idx is not None
+
         self.donors = []
         self.acceptors = []
         for i, line in enumerate(nbolines[start_idx:end_idx], start=start_idx):
@@ -187,34 +188,34 @@ class NboCalculation:
         res = {}
         loglines = open(self.logname, "r").readlines()
         self.parse_nbo_info(loglines)
-        
+
         fao = NboSymmMatrix(self.nbo47name, self.nbasis, section='$FOCK')
         fnbo = NboSymmMatrix(self.fnboname, self.nbasis)
         dmao = NboSymmMatrix(self.nbo47name, self.nbasis, section='$DENSITY')
         dmnbo = NboSymmMatrix(self.dmnboname, self.nbasis)
         aonbo = NboNonSymmMatrix(self.aonboname, self.nbasis)
         chao = NboSymmMatrix(self.logname, self.nbasis)
-        
+
         if 'ScfEner' in self.keys:
             res['ScfEner'] = get_scf_energy(loglines)
-        
+
         if 'Del_total' in self.keys:
             res['Del_total'] = get_deletion_energy(self.delname)
-        
+
         for totalkey in TOTAL_KEYS:
             if totalkey in self.keys:
                 res[totalkey] = 0 # Initialize before summing up
-        
+
         for i in range(self.nbasis):
             for j in range(i):
                 for totalkey in TOTAL_KEYS:
                     if totalkey in self.keys:
                         res[totalkey] += INT_FORMULAS[totalkey.split('_')[0]](fnbo, dmnbo, i, j)
-        
+
         for sumkey in SUM_KEYS:
             if sumkey in self.keys:
                 res[sumkey] = 0 # Initialize before summing up
-        
+
         for donor in self.donors:
             for acceptor in self.acceptors:
                 for sumkey in SUM_KEYS:

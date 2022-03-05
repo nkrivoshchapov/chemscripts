@@ -1,7 +1,7 @@
 import multiprocessing, threading, subprocess, time, os, ntpath
 from myscripts import utils
 
-MAXPROC = 22
+MAXPROC = 42
 MAXTRIES = 3
 SLEEP_DURATION = 0.1
 

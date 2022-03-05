@@ -1,5 +1,5 @@
 import numpy as np
-import mcubes, sklearn
+import mcubes, sklearn.decomposition
 import glob
 
 from myscripts.utils import wait_for_termination
