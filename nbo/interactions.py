@@ -3,8 +3,6 @@ import numpy as np
 
 from .logparsers import NBO3LogParser, NBO6LogParser
 
-START_RE = re.compile(r"\(occupancy\).*bond.*orbital.*\/.*coefficients.*\/.*hybrids", re.IGNORECASE)
-END_RE = re.compile("nho.*directionality.*and.*bond.*bending", re.IGNORECASE)
 E2_EDIFF_THRESHOLD = 0.00001
 
 
@@ -133,43 +131,45 @@ class NboCalculation:
 
         if self.nboname.endswith('.log'):
             self.parser = NBO3LogParser(self.nboname)
+            self.suffix = '.log'
         elif self.nboname.endswith('.out'):
             self.parser = NBO6LogParser(self.nboname)
+            self.suffix = '.out'
         self.nbasis = self.parser.nbasis
 
-        if self.nboname.endswith('.log') and os.path.isfile(nboname.replace('.log', '.out')):
+        if self.suffix == '.log' and os.path.isfile(nboname.replace('.log', '.out')):
             self.outname = nboname.replace('.log', '.out')
 
-        if self.nboname.endswith('.out') and os.path.isfile(nboname.replace('.out', '.log')):
-            self.logname = nboname.replace('.log', '.out')
+        if self.suffix == '.out' and os.path.isfile(nboname.replace('.out', '.log')):
+            self.logname = nboname.replace('.out', '.log')
 
         if self.nboname.endswith('.log') or hasattr(self, "logname"):
             self.scfener = self.obtain_scf_energy()
             # self.chao = NboSymmMatrix(self.nboname, self.nbasis) if self.nboname.endswith('.log') \
             #             else NboSymmMatrix(self.logname, self.nbasis)
 
-        nbo47name = self.nboname.replace('.log', '.47')
+        nbo47name = self.nboname.replace(self.suffix, '.47')
         if os.path.isfile(nbo47name):
             self.nbo47name = nbo47name
             self.fao = NboSymmMatrix(self.nbo47name, self.nbasis, section='$FOCK')
             self.dmao = NboSymmMatrix(self.nbo47name, self.nbasis, section='$DENSITY')
 
-        fnboname = self.nboname.replace('.log', '.fnbo')
+        fnboname = self.nboname.replace(self.suffix, '.fnbo')
         if os.path.isfile(fnboname):
             self.fnboname = fnboname
             self.fnbo = NboSymmMatrix(self.fnboname, self.nbasis)
 
-        dmnboname = self.nboname.replace('.log', '.dmnbo')
+        dmnboname = self.nboname.replace(self.suffix, '.dmnbo')
         if os.path.isfile(dmnboname):
             self.dmnboname = dmnboname
             self.dmnbo = NboSymmMatrix(self.dmnboname, self.nbasis)
 
-        aonboname = self.nboname.replace('.log', '.aonbo')
+        aonboname = self.nboname.replace(self.suffix, '.aonbo')
         if os.path.isfile(aonboname):
             self.aonboname = aonboname
             self.aonbo = NboNonSymmMatrix(self.aonboname, self.nbasis)
 
-        delname = self.nboname.replace('_nbo.log', '_del.log')
+        delname = self.nboname.replace('_nbo' + self.suffix, '_del.log')
         if os.path.isfile(delname):
             self.delname = delname
             self.delener = self.obtain_deletion_energy()
@@ -188,8 +188,8 @@ class NboCalculation:
     def obtain_deletion_energy(self):
         lines = open(self.delname, "r").readlines()
         for line in reversed(lines):
-            if "Energy of deletion :" in line:
-                return float(line.split(':')[1].replace('\n', ''))
+            if "Energy change :" in line:
+                return float(line.split(':')[1].split('a.u.')[0])
 
     def get_data(self, keys=("E2_sum",), donor_patterns=(), acceptor_patterns=(), donors=(), acceptors=()):
         if len(donor_patterns) > 0 and len(acceptor_patterns) > 0:

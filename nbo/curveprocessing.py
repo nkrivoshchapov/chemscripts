@@ -18,7 +18,7 @@ def get_coeff(df, main, ref):
 
 
 def prepare_scale_df(csvname):
-    df = pd.read_csv(csvname)
+    df = pd.read_csv(csvname, sep=';')
     bases = list(df['Basis'].unique())
     molecules = list(df['Molecule'].unique())
     ENERGY_TYPES = ['ScfEner', 'DF_total', 'E2_total', 'DF_sum', 'E2_sum', 'Del_total']
