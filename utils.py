@@ -340,7 +340,7 @@ def get_formchk_call(chkfile):
            }
 
 def check_availability(name):
-    if not distutils.spawn.find_executable("notepad.exe"):
+    if not distutils.spawn.find_executable(name):
         return False
     else:
         return True
