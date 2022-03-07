@@ -1,10 +1,56 @@
 import numpy as np
 import os, copy, time, ntpath
 from numpy.linalg import norm
-
+import pandas as pd
 
 DEG2RAD = 0.0174532925199432957692
 RAD2DEG = 1 / DEG2RAD
+H2KC = 627.509474063
+
+def is_float(inp):
+    try:
+        float(inp)
+        return True
+    except:
+        return False
+
+
+def is_int(inp):
+    try:
+        int(inp)
+        return True
+    except:
+        return False
+
+
+def parse_csv(filename, sep=None, use_pd=True):
+    lines = open(filename, 'r').readlines()
+    if sep is None and ',' in lines[1]:
+        sep = ','
+    elif sep is None and ';' in lines[1]:
+        sep = ';'
+    elif sep is None:
+        raise Exception("Cannot decide what is the separator")
+
+    attrs = []
+    data = {}
+    for item in lines[0].replace('\n', '').split(sep):
+        attrs.append(item)
+        data[item] = []
+
+    for line in lines[1:]:
+        parts = line.replace('\n', '').split(sep)
+        for i, part in enumerate(parts):
+            if is_int(part):
+                data[attrs[i]].append(int(part))
+            elif is_float(part):
+                data[attrs[i]].append(float(part))
+            else:
+                data[attrs[i]].append(part)
+    if use_pd:
+        return pd.DataFrame(data)
+    else:
+        return data
 
 
 def write_gjf(xyzs, syms, template_name, filename, subs={}):
