@@ -1,6 +1,7 @@
 import numpy as np
 import os, copy, time, ntpath
 from numpy.linalg import norm
+import distutils.spawn
 
 
 DEG2RAD = 0.0174532925199432957692
@@ -291,3 +292,9 @@ def get_formchk_call(chkfile):
               'nproc': 1,
               'resfile': chkfile.replace(".chk", ".fchk"),
            }
+
+def check_availability(name):
+    if not distutils.spawn.find_executable("notepad.exe"):
+        return False
+    else:
+        return True
