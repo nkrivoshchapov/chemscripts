@@ -64,7 +64,7 @@ def gauss_driver(todo_files, todo_lock, done_files, done_lock):
             with todo_lock:
                 if len(todo_files) > 0:
                     next_task = get_next_task(todo_files)
-
+        # print("NFile = %d; next task = %s" % (nfiles, repr(next_task)))
         while nfiles > 0 and next_task[1] <= MAXPROC - occupied_proc:
             with todo_lock:
                 calc_file = todo_files.pop(0)
