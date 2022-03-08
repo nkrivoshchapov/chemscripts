@@ -135,6 +135,8 @@ class NboCalculation:
         elif self.nboname.endswith('.out'):
             self.parser = NBO6LogParser(self.nboname)
             self.suffix = '.out'
+        # print(repr(self.parser.NBOs))
+        # raise Exception("kik")
         self.nbasis = self.parser.nbasis
 
         if self.suffix == '.log' and os.path.isfile(nboname.replace('.log', '.out')):
@@ -192,6 +194,8 @@ class NboCalculation:
                 return float(line.split(':')[1].split('a.u.')[0])
 
     def get_data(self, keys=("E2_sum",), donor_patterns=(), acceptor_patterns=(), donors=(), acceptors=()):
+        # print("My donors pat = " + repr(donor_patterns))
+        # print("My acceptors pat = " + repr(acceptor_patterns))
         if len(donor_patterns) > 0 and len(acceptor_patterns) > 0:
             assert len(donors) == 0 and len(acceptors) == 0, "NBO indices and patterns were given simultaniously!"
             donors = []
@@ -201,6 +205,9 @@ class NboCalculation:
             for acceptor_pat in acceptor_patterns:
                 acceptors += [item['index'] for item in self.parser.find_by_regex(acceptor_pat)]
 
+        # print("My donors = " + repr(donors))
+        # print("My acceptors = " + repr(acceptors))
+        # raise Exception("kek")
         res = {}
         if 'ScfEner' in keys:
             res['ScfEner'] = self.scfener

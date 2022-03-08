@@ -1,7 +1,6 @@
 import multiprocessing, threading, subprocess, time, os, ntpath
 from myscripts import utils
 
-MAXPROC = 45
 MAXTRIES = 3
 SLEEP_DURATION = 0.1
 
@@ -14,7 +13,7 @@ def get_next_task(todo_files):
         return (todo_files[0], utils.getnproc(todo_files[0]))
 
 
-def gauss_driver(todo_files, todo_lock, done_files, done_lock):
+def gauss_driver(todo_files, todo_lock, done_files, done_lock, maxproc):
     # Items in todo_files may be:
     #   1) Names of gjf files (calculation with rung)
     #   2) Names of *.47 files (calculation with NBO6)
@@ -65,7 +64,7 @@ def gauss_driver(todo_files, todo_lock, done_files, done_lock):
                 if len(todo_files) > 0:
                     next_task = get_next_task(todo_files)
         # print("NFile = %d; next task = %s" % (nfiles, repr(next_task)))
-        while nfiles > 0 and next_task[1] <= MAXPROC - occupied_proc:
+        while nfiles > 0 and next_task[1] <= maxproc - occupied_proc:
             with todo_lock:
                 calc_file = todo_files.pop(0)
                 curnproc = next_task[1]
@@ -124,12 +123,20 @@ def gauss_driver(todo_files, todo_lock, done_files, done_lock):
         time.sleep(SLEEP_DURATION)
 
 
-def init_thread():
+def init_thread(maxproc=None):
+    if maxproc is None:
+        print("nprocs = %d" % os.cpu_count())
+        if os.cpu_count() > 48:
+            maxproc = 48
+        else:
+            maxproc = os.cpu_count()
+        print("Since MAXPROC was not given. Automatically decided to use %d threads." % maxproc)
+    assert maxproc <= os.cpu_count()
     todo_files = []
     todo_lock = multiprocessing.Lock()
     done_files = []
     done_lock = multiprocessing.Lock()
-    thread = threading.Thread(target=gauss_driver, args=(todo_files, todo_lock, done_files, done_lock))
+    thread = threading.Thread(target=gauss_driver, args=(todo_files, todo_lock, done_files, done_lock, maxproc))
     thread.start()
     gdriver = {
                   'todo_lock': todo_lock,

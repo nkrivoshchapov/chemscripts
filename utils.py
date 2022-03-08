@@ -247,10 +247,15 @@ def is_normal_termination(logname, inpfile):
     elif inpfile.endswith(".47") and logname.endswith("_NBO.out"):
         return os.path.isfile(logname)
 
+def get_length(atoms, xyz):
+    points = [xyz[i-1] for i in atoms]
+    assert len(points) == 2
+    return np.linalg.norm(points[0] - points[1])
+
 def get_dihedral(atoms=None, xyz=None, points=None):
     if atoms is not None and xyz is not None:
         points = [xyz[i-1] for i in atoms]
-    assert points is not None
+    assert len(points) == 4
     fr1_side = points[0] - points[1]
     fr1_mid = points[2] - points[1]
     fr2_mid = -fr1_mid
