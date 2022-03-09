@@ -3,10 +3,16 @@ import numpy as np
 from numpy.linalg import inv, norm
 import copy
 
+from ..nbo import NBO3LogParser, NBO6LogParser
 
 class Molecule:
-    def __init__(self, inputfile):
-        self.readsdf(inputfile)
+    def __init__(self, sdf=None, nbolog=None):
+        if sdf is not None:
+            self.readsdf(sdf)
+        elif nbolog is not None:
+            self.readnbotopology(nbolog) # Must read symbols and xyzs by calling 'from_xyz'
+        else:
+            raise Exception("No args were given")
 
     def readsdf(self, file):
         lines = open(file, "r").readlines()
@@ -25,10 +31,21 @@ class Molecule:
             self.G.add_edge(at1 - 1, at2 - 1)
             self.G[at1 - 1][at2 - 1]['type'] = bondtype
 
+    def readnbotopology(self, nbolog):
+        if nbolog.endswith('.log'):
+            parser = NBO3LogParser(nbolog)
+        elif nbolog.endswith('.out'):
+            parser = NBO6LogParser(nbolog)
+        else:
+            raise Exception(NotImplementedError)
+        bonds = parser.get_bondlist()
+        self.G = nx.Graph()
+        for bond in bonds:
+            self.G.add_edge(bond[0] - 1, bond[1] - 1)
+
     def from_xyz(self, xyzs, syms):
         for i, xyz in enumerate(xyzs):
             self.G.nodes[i]['xyz'] = copy.deepcopy(xyz)
-            # print("%s vs. %s" % (repr(self.G.nodes[i]['symbol']), repr(syms[i])))
             assert self.G.nodes[i]['symbol'] == syms[i]
 
     def as_xyz(self):

@@ -6,6 +6,9 @@ Some ideas for these classes:
     2) Conversion from nbo data to molecular graph (interface with geom/molfrag)
     3) Hybridization data
 """
+BOND_PATTERN = re.compile(r"BD\(.*\).*-.*", re.IGNORECASE)
+
+
 class NBOLogParser:
     def __init__(self, logfile):
         self.NBOs = [] # Elements are dicts
@@ -20,11 +23,21 @@ class NBOLogParser:
         if isinstance(pattern, str):
             pattern = re.compile(pattern)
         assert isinstance(pattern, re.Pattern)
+
         result = []
         for nbo in self.NBOs:
             if re.search(pattern, nbo['name']):
                 result.append(nbo)
         return result
+
+    def get_bondlist(self):
+        nbos = self.find_by_regex(BOND_PATTERN)
+        bonds = []
+        for nbo in nbos:
+            atoms = nbo['name'].split(')')[1].split('-')
+            idxs = [re.sub('[^0-9]','', a) for a in atoms]
+            bonds.append(idxs)
+        return bonds
 
 
 class NBO6LogParser(NBOLogParser):
