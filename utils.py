@@ -54,6 +54,99 @@ def parse_csv(filename, sep=None, use_pd=True):
         return data
 
 
+def parse_irc(logname):
+    IRC_LINE = "IRC-IRC-IRC-IRC-IRC-IRC-IRC-IRC-IRC-IRC-IRC-IRC-IRC-IRC-IRC-IRC-IRC-IRC"
+    lines = open(logname, 'r').readlines()
+    irc_idxpairs = []
+    lone_idx = None
+    for i, line in enumerate(lines):
+        if IRC_LINE in line:
+            if lone_idx is None:
+                lone_idx = i
+            else:
+                irc_idxpairs.append((lone_idx, i))
+                lone_idx = None
+
+    sections = []
+    for i, item in enumerate(irc_idxpairs[1:], start=1):
+        irc_part = lines[item[0] + 1:item[1]]
+        calc_part = lines[irc_idxpairs[i - 1][1] + 1:item[0]]
+        sections.append({
+            'irc_part': irc_part,
+            'calc_part': calc_part,
+        })
+
+    irc = {'syms': None,
+           'points': {
+               'start': None,
+               'start_energy': None,
+               'f_geoms': [],
+               'b_geoms': [],
+               'f_rxcoord': [],
+               'b_rxcoord': [],
+               'f_energy': [],
+               'b_energy': [],
+           }}
+
+    for i, sect in enumerate(sections):
+        xyzs, syms = parse_geometry(sect['calc_part'])
+        if irc['syms'] is None:
+            irc['syms'] = syms
+        else:
+            assert syms == irc['syms']
+        if "Calculating another point on the path." in sect['irc_part'][len(sect['irc_part']) - 1]:
+            point_idx = None
+            path_idx = None
+            for line in sect['irc_part']:
+                if "Point Number:" in line and "Path Number:" in line:
+                    point_idx = int(line.split(':')[1].split('Path')[0])
+                    path_idx = int(line.split(':')[2].replace('\n', ''))
+            assert point_idx is not None and path_idx is not None
+
+            if point_idx == 0 and path_idx == 1:
+                irc['points']['start'] = xyzs
+            elif path_idx == 1:
+                irc['points']['f_geoms'].append(xyzs)
+            elif path_idx == 2:
+                irc['points']['b_geoms'].append(xyzs)
+            else:
+                raise Exception(ValueError)
+    lastsect = lines[irc_idxpairs[len(irc_idxpairs) - 1][1] + 1:len(lines)]
+    xyzs, syms = parse_geometry(lastsect) # Gets the last point on reverse path. Gaussian is the best
+    assert syms == irc['syms']
+    irc['points']['b_geoms'].append(xyzs)
+
+    print("Forward %d points" % len(irc['points']['f_geoms']))
+    print("Backward %d points" % len(irc['points']['b_geoms']))
+
+    rxc_start = None
+    rxc_end = None
+    for i, line in enumerate(lines):
+        if rxc_start is None and "Summary of reaction path following" in line:
+            rxc_start = i + 3
+        elif rxc_start is not None and i > rxc_start and "----------------------------------------" in line:
+            rxc_end = i
+            break
+    assert rxc_start is not None and rxc_end is not None
+
+    for line in lines[rxc_start:rxc_end]:
+        parts = line.replace('\n', '').split()
+        energy = float(parts[1])
+        rxcoord = float(parts[2])
+        if rxcoord < 0.0:
+            irc['points']['b_rxcoord'].insert(0, rxcoord)
+            irc['points']['b_energy'].insert(0, energy)
+        elif rxcoord > 0.0:
+            irc['points']['f_rxcoord'].append(rxcoord)
+            irc['points']['f_energy'].append(energy)
+        else:
+            irc['points']['start_energy'] = energy
+    assert len(irc['points']['f_rxcoord']) == len(irc['points']['f_geoms'])
+    assert len(irc['points']['b_rxcoord']) == len(irc['points']['b_geoms'])
+
+    return irc
+
+
 def write_gjf(xyzs, syms, template_name, filename, subs={}):
     xyz_parts = []
     for i in range(len(xyzs)):
@@ -70,16 +163,16 @@ def write_gjf(xyzs, syms, template_name, filename, subs={}):
     with open(filename, 'w') as f:
         f.write(gjf_string)
 
-def parse_log(logname):
-    rline = open(logname,"r").readlines()
+
+def parse_geometry(rline, preamble="Standard orientation:"):
     xyzs = []
     syms = []
 
     start = 0
     end = 0
-    res_string=""
-    for i in range (len(rline)):
-        if "Standard orientation:" in rline[i]:
+    res_string = ""
+    for i in range(len(rline)):
+        if preamble in rline[i]:
             start = i
 
     for m in range (start + 5, len(rline)):
@@ -90,7 +183,6 @@ def parse_log(logname):
     for line in rline[start+5 : end] :
         words = line.split()
         word1 = int(words[1])
-        word3 = str(words[3])
 
         if   word1 ==   1 : word1 = "H"
         elif word1 ==   2 : word1 = "He"
@@ -217,6 +309,12 @@ def parse_log(logname):
                               float(xyz_parts[2])]))
         syms.append(word1)
     return xyzs, syms
+
+
+def parse_log(logname):
+    lines = open(logname,"r").readlines()
+    return parse_geometry(lines)
+
 
 def parse_xyz(filename):
     lines = open(filename, "r").readlines()
