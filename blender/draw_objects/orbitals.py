@@ -38,6 +38,7 @@ def get_mcubes_templates(nboname, nbodir):
 
 def plot_nbo(nboname, color="#377eb8", reverse=False, nbodir="./calcfiles"):
     files = get_mcubes_templates(nboname, nbodir)
+    print(repr(files))
     if len(files) > 2 or len(files) < 1:
         raise Exception("Unexpected number of %s_*.wrl files" % nboname)
 
