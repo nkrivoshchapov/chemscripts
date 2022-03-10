@@ -164,6 +164,20 @@ def write_gjf(xyzs, syms, template_name, filename, subs={}):
         f.write(gjf_string)
 
 
+def write_xyz(xyzs, syms, filename):
+    xyz_parts = [str(len(xyzs)), ""]
+    for i in range(len(xyzs)):
+        xyz_parts.append("%2s %14.6f %14.6f %14.6f" % (
+                                         syms[i],
+                                         xyzs[i][0],
+                                         xyzs[i][1],
+                                         xyzs[i][2]
+                         ))
+    xyz_string = '\n'.join(xyz_parts)
+    with open(filename, 'w') as f:
+        f.write(xyz_string)
+
+
 def parse_geometry(rline, preamble="Standard orientation:"):
     xyzs = []
     syms = []

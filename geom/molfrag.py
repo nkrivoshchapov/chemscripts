@@ -39,19 +39,23 @@ class Molecule:
         else:
             raise Exception(NotImplementedError)
         bonds = parser.get_bondlist()
-        self.G = nx.Graph()
+        self.G = nx.Graph() # TODO What to do with unbonded atoms??
         for bond in bonds:
             self.G.add_edge(bond[0] - 1, bond[1] - 1)
+            self.G[bond[0] - 1][bond[1] - 1]['type'] = 1
 
     def from_xyz(self, xyzs, syms):
         for i, xyz in enumerate(xyzs):
             self.G.nodes[i]['xyz'] = copy.deepcopy(xyz)
-            assert self.G.nodes[i]['symbol'] == syms[i]
+            if 'symbol' in self.G.nodes[i]:
+                assert self.G.nodes[i]['symbol'] == syms[i]
+            else:
+                self.G.nodes[i]['symbol'] = syms[i]
 
     def as_xyz(self):
         xyzs = []
         syms = []
-        for atom in self.G.nodes:
+        for atom in range(self.G.number_of_nodes()):
             syms.append(self.G.nodes[atom]['symbol'])
             xyzs.append(self.G.nodes[atom]['xyz'])
         return xyzs, syms
@@ -64,6 +68,26 @@ class Molecule:
 
     def xyz(self, i):
         return self.G.nodes[i - 1]['xyz']
+
+    def save_sdf(self, sdfname):
+        lines = ["", "", ""]
+        lines.append("%3d%3d  0  0  0  0  0  0  0  0999 V2000" % (self.G.number_of_nodes(), self.G.number_of_nodes()))
+        #   -5.5250    1.6470    1.0014 C   0  0  0  0  0  0  0  0  0  0  0  0
+        for atom in range(self.G.number_of_nodes()):
+            lines.append("%10.4f%10.4f%10.4f%3s  0  0  0  0  0  0  0  0  0  0  0  0" % (
+                self.G.nodes[atom]['xyz'][0],
+                self.G.nodes[atom]['xyz'][1],
+                self.G.nodes[atom]['xyz'][2],
+                self.G.nodes[atom]['symbol']))
+
+        for edge in self.G.edges:
+            lines.append("%3s%3s%3s  0" % (edge[0] + 1,
+                                           edge[1] + 1,
+                                           self.G[edge[0]][edge[1]]['type']))
+        lines.append("M  END\n")
+
+        with open(sdfname, "w") as f:
+            f.write("\n".join(lines))
 
 
 class Fragment:

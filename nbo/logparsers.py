@@ -15,6 +15,7 @@ class NBOLogParser:
                        # Keys: 'index' (starts with 1), 'name'
         self.parse_log(logfile)
         self.nbasis = len(self.NBOs)
+        self.logfile = logfile
 
     def parse_log(self, file):
         raise Exception(NotImplementedError)
@@ -35,8 +36,9 @@ class NBOLogParser:
         bonds = []
         for nbo in nbos:
             atoms = nbo['name'].split(')')[1].split('-')
-            idxs = [re.sub('[^0-9]','', a) for a in atoms]
+            idxs = [int(re.sub('[^0-9]','', a)) for a in atoms]
             bonds.append(idxs)
+        # print("File: %s Bond: %s" % (self.logfile, repr(bonds)))
         return bonds
 
 
