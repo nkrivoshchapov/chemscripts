@@ -42,7 +42,7 @@ def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger,
         with gdriver['todo_lock']:
             gdriver['todo_files'].append({
                                             'command': command,
-                                            'wd': '.', #os.path.dirname(newcube),
+                                            'wd': '.', # os.path.dirname(newcube),
                                             'nproc': CUBENPROC,
                                             'resfile': newcube,
                                          })

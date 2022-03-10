@@ -71,7 +71,7 @@ class Molecule:
 
     def save_sdf(self, sdfname):
         lines = ["", "", ""]
-        lines.append("%3d%3d  0  0  0  0  0  0  0  0999 V2000" % (self.G.number_of_nodes(), self.G.number_of_nodes()))
+        lines.append("%3d%3d  0  0  0  0  0  0  0  0999 V2000" % (self.G.number_of_nodes(), self.G.number_of_edges()))
         #   -5.5250    1.6470    1.0014 C   0  0  0  0  0  0  0  0  0  0  0  0
         for atom in range(self.G.number_of_nodes()):
             lines.append("%10.4f%10.4f%10.4f%3s  0  0  0  0  0  0  0  0  0  0  0  0" % (
