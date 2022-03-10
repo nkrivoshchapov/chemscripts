@@ -1,44 +1,48 @@
 import numpy as np
 import mcubes, sklearn.decomposition
-import glob
+import glob, os
 
 from myscripts.utils import wait_for_termination
 
 
 def nbo_to_idx(nbo, reorder_nbo):
-    return reorder_nbo.index(nbo) + 1
+    return reorder_nbo.index(nbo)
 
 
 CUBENPROC = 6
-def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger, wait=False):
+def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger, wait=False, nbo_reorder=True):
     # cubename is expected to have {nbo} at least in cases when len(nbo_indices) > 1
     logger.info("Processing logfile " + logname)
-    reorder_nbo = []
-    loglines = open(logname, "r").readlines()
-    for line in loglines:
-        if "Reordering of NBOs for storage:" in line:
-            parts = line.replace("Reordering of NBOs for storage:", "").replace("\n", "").split()
-            for part in parts:
-                reorder_nbo.append(int(part))
+    if nbo_reorder:
+        reorder_nbo = []
+        loglines = open(logname, "r").readlines()
+        for line in loglines:
+            if "Reordering of NBOs for storage:" in line:
+                parts = line.replace("Reordering of NBOs for storage:", "").replace("\n", "").split()
+                for part in parts:
+                    reorder_nbo.append(int(part))
+        for i in range(len(nbo_indices)):
+            nbo_indices[i] = nbo_to_idx(nbo_indices[i], reorder_nbo)
+
+    for i in range(len(nbo_indices)):
+        nbo_indices[i] += 1 # Indexing in cubegen start with 1
 
     waittasks = []
-    cubefiles = []
     for nbo in nbo_indices:
         if "{nbo}" in cubename:
             newcube = cubename.format(nbo=nbo)
         else:
             assert len(nbo_indices) == 1
             newcube = cubename
-        cubefiles.append(newcube)
         logger.info("Generating cubefile %s" % newcube)
         command = 'cubegen {nproc} MO={corr_idx} {fchk} {cube} 150'.format(
-            nproc=CUBENPROC, corr_idx=nbo_to_idx(nbo, reorder_nbo), fchk=fchkname, cube=newcube)
+                nproc=CUBENPROC, corr_idx=nbo, fchk=fchkname, cube=newcube)
         waittasks.append(command)
 
         with gdriver['todo_lock']:
             gdriver['todo_files'].append({
                                             'command': command,
-                                            'wd': '.', # os.path.dirname(newcube),
+                                            'wd': '.', #os.path.dirname(newcube),
                                             'nproc': CUBENPROC,
                                             'resfile': newcube,
                                          })

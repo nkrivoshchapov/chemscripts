@@ -157,7 +157,6 @@ class NboCalculation:
             self.dmao = NboSymmMatrix(self.nbo47name, self.nbasis, section='$DENSITY')
 
         fmoname = self.nboname.replace(self.suffix, '.fmo')
-        print("FMOfile = " + fmoname)
         if os.path.isfile(fmoname):
             self.fmoname = fmoname
             self.fmo = NboSymmMatrix(self.fmoname, self.nbasis)
