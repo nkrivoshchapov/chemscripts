@@ -5,9 +5,12 @@ import os, ntpath, glob
 from ..materials import get_orbital_material, get_wavy_material
 
 
-def nbo_from_mcubes(name_tempate, material): # name_tempate = trino_48_plus.{type}iso
+def nbo_from_mcubes(name_tempate, material, align=None): # name_tempate = trino_48_plus.{type}iso
     objname = ntpath.basename(name_tempate).split('.')[0]
     vertices = list(np.load(name_tempate.format(type='vertices')))
+    if align is not None:
+        for i, v in enumerate(vertices):
+            vertices[i] = align[0] @ v + align[1]
     edges = list(np.load(name_tempate.format(type='edges')))
     triangles = list(np.load(name_tempate.format(type='triangles')))
 
@@ -36,7 +39,7 @@ def get_mcubes_templates(nboname, nbodir):
     return surf_types
 
 
-def plot_nbo(nboname, color="#377eb8", reverse=False, nbodir="./calcfiles"):
+def plot_nbo(nboname, color="#377eb8", reverse=False, nbodir="./calcfiles", align=None):
     files = get_mcubes_templates(nboname, nbodir)
     print(repr(files))
     if len(files) > 2 or len(files) < 1:
@@ -53,15 +56,17 @@ def plot_nbo(nboname, color="#377eb8", reverse=False, nbodir="./calcfiles"):
 
     if len(files) == 1:
         if not reverse:
-            a = nbo_from_mcubes(files[0], material=plusmat)
+            a = nbo_from_mcubes(files[0], material=plusmat, align=align)
         else:
-            a = nbo_from_mcubes(files[0], material=minusmat)
+            a = nbo_from_mcubes(files[0], material=minusmat, align=align)
         return a
     elif len(files) == 2:
         if not reverse:
-            a, b = nbo_from_mcubes(files[0], material=plusmat), nbo_from_mcubes(files[1], material=minusmat)
+            a, b = nbo_from_mcubes(files[0], material=plusmat, align=align), \
+                   nbo_from_mcubes(files[1], material=minusmat, align=align)
         else:
-            a, b = nbo_from_mcubes(files[1], material=plusmat), nbo_from_mcubes(files[0], material=minusmat)
+            a, b = nbo_from_mcubes(files[1], material=plusmat, align=align), \
+                   nbo_from_mcubes(files[0], material=minusmat, align=align)
         return a, b
 
 

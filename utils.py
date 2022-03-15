@@ -178,6 +178,20 @@ def write_xyz(xyzs, syms, filename):
         f.write(xyz_string)
 
 
+def parse_gjf(file):
+    lines = open(file, 'r').readlines()
+    xyzs, syms = [], []
+    reading = False
+    for line in lines:
+        parts = line.split()
+        if len(parts) == 4 and is_float(parts[1]) and is_float(parts[2]) and is_float(parts[3]):
+            syms.append(parts[0])
+            xyzs.append(np.array([float(parts[1]),
+                                  float(parts[2]),
+                                  float(parts[3])]))
+    return xyzs, syms
+
+
 def parse_geometry(rline, preamble="Standard orientation:"):
     xyzs = []
     syms = []

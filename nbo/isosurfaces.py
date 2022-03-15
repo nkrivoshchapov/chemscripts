@@ -22,21 +22,21 @@ def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger,
                 for part in parts:
                     reorder_nbo.append(int(part))
         for i in range(len(nbo_indices)):
-            nbo_indices[i] = nbo_to_idx(nbo_indices[i], reorder_nbo)
+            nbo_indices[i] = {'real': nbo_indices[i], 'gauss': nbo_to_idx(nbo_indices[i], reorder_nbo)}
 
     for i in range(len(nbo_indices)):
-        nbo_indices[i] += 1 # Indexing in cubegen start with 1
+        nbo_indices[i]['gauss'] += 1 # Indexing in cubegen start with 1
 
     waittasks = []
     for nbo in nbo_indices:
         if "{nbo}" in cubename:
-            newcube = cubename.format(nbo=nbo)
+            newcube = cubename.format(nbo=nbo['real'])
         else:
             assert len(nbo_indices) == 1
             newcube = cubename
         logger.info("Generating cubefile %s" % newcube)
         command = 'cubegen {nproc} MO={corr_idx} {fchk} {cube} 150'.format(
-                nproc=CUBENPROC, corr_idx=nbo, fchk=fchkname, cube=newcube)
+                nproc=CUBENPROC, corr_idx=nbo['gauss'], fchk=fchkname, cube=newcube)
         waittasks.append(command)
 
         with gdriver['todo_lock']:
