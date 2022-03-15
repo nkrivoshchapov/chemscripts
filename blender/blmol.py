@@ -289,14 +289,14 @@ class Bond:
         rot_matrix_x = rot_matrix_x/np.linalg.norm(rot_matrix_x)
         rot_matrix = [rot_matrix_x, rot_matrix_y, rot_matrix_z]
 
-        ov = bpy.context.copy()
-        ov['area'] = [a for a in bpy.context.screen.areas if a.type == "VIEW_3D"][0]
-        bpy.ops.transform.rotate(ov, value=rot_angle, orient_axis='Z',
-                                 orient_matrix=rot_matrix,
-                                 constraint_axis=(False, False, True))
-        # bpy.ops.transform.rotate(value=rot_angle, orient_axis='Z',
+        # ov = bpy.context.copy()
+        # ov['area'] = [a for a in bpy.context.screen.areas if a.type == "VIEW_3D"][0]
+        # bpy.ops.transform.rotate(ov, value=rot_angle, orient_axis='Z',
         #                          orient_matrix=rot_matrix,
         #                          constraint_axis=(False, False, True))
+        bpy.ops.transform.rotate(value=rot_angle, orient_axis='Z',
+                                 orient_matrix=rot_matrix,
+                                 constraint_axis=(False, False, True))
         bpy.ops.object.shade_smooth()
 
         if edge_split:

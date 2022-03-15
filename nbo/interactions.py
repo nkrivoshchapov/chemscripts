@@ -245,3 +245,4 @@ class NboCalculation:
                         res[sumkey] += INT_FORMULAS[sumkey.split('_')[0]](self.fnbo, self.dmnbo,
                                                                           donor - 1, acceptor - 1)
         return res
+

@@ -23,6 +23,9 @@ def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger,
                     reorder_nbo.append(int(part))
         for i in range(len(nbo_indices)):
             nbo_indices[i] = {'real': nbo_indices[i], 'gauss': nbo_to_idx(nbo_indices[i], reorder_nbo)}
+    else:
+        for i in range(len(nbo_indices)):
+            nbo_indices[i] = {'real': nbo_indices[i], 'gauss': nbo_indices[i]}
 
     for i in range(len(nbo_indices)):
         nbo_indices[i]['gauss'] += 1 # Indexing in cubegen start with 1
