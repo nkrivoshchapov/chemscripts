@@ -2,7 +2,6 @@ import numpy as np
 import os, copy, time, ntpath
 from numpy.linalg import norm
 import distutils.spawn
-import pandas as pd
 
 DEG2RAD = 0.0174532925199432957692
 RAD2DEG = 1 / DEG2RAD
@@ -49,6 +48,7 @@ def parse_csv(filename, sep=None, use_pd=True):
             else:
                 data[attrs[i]].append(part)
     if use_pd:
+        import pandas as pd
         return pd.DataFrame(data)
     else:
         return data
@@ -325,10 +325,12 @@ def parse_geometry(rline, preamble="Standard orientation:"):
     return xyzs, syms
 
 
-def parse_log(logname):
+def parse_log(logname, input_orientation=False):
     lines = open(logname,"r").readlines()
-    return parse_geometry(lines)
-
+    if input_orientation:
+        return parse_geometry(lines, preamble="Input orientation:")
+    else:
+        return parse_geometry(lines)
 
 def parse_xyz(filename):
     lines = open(filename, "r").readlines()

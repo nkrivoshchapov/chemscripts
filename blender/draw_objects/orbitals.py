@@ -29,7 +29,7 @@ def nbo_from_mcubes(name_tempate, material): # name_tempate = trino_48_plus.{typ
 
 def get_mcubes_templates(nboname, nbodir):
     surf_types = []
-    for file in glob.glob(os.path.join(nbodir, nboname + '*')):
+    for file in glob.glob(os.path.join(nbodir, nboname + '*iso')):
         curtype = os.path.join(nbodir, ntpath.basename(file).split('.')[0]) + ".{type}iso"
         if curtype not in surf_types:
             surf_types.append(curtype)
