@@ -146,10 +146,10 @@ def get_nbo_direction(surfnames):
     center = np.zeros(3)
     for v in vertices:
         center += v
-    center /= len(center)
+    center /= len(vertices)
 
     for item in vertices:
         item -= center
     pca = sklearn.decomposition.PCA(3)
     pca.fit(vertices)
-    return pca.components_[0]
+    return pca.components_[0], center

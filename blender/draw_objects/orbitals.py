@@ -3,7 +3,7 @@ import numpy as np
 import os, ntpath, glob
 
 from ..materials import get_orbital_material, get_wavy_material
-
+from ...nbo import isosurfaces as msiso
 
 def nbo_from_mcubes(name_tempate, material, align=None): # name_tempate = trino_48_plus.{type}iso
     objname = ntpath.basename(name_tempate).split('.')[0]
@@ -39,9 +39,40 @@ def get_mcubes_templates(nboname, nbodir):
     return surf_types
 
 
+def get_nbo_directions(nboname, nbodir, align=None):
+    files = get_mcubes_templates(nboname, nbodir)
+
+    if len(files) == 1:
+        dir, center = msiso.get_nbo_direction(files[0])
+        if align is not None:
+            center = align[0] @ center + align[1]
+        res = {'plus': {
+            'center': center,
+            'dir': dir
+        }}
+    elif len(files) == 2:
+        dir, center = msiso.get_nbo_direction(files[0])
+        if align is not None:
+            center = align[0] @ center + align[1]
+        res = {'plus': {
+            'center': center,
+            'dir': dir
+        }}
+        dir, center = msiso.get_nbo_direction(files[1])
+        if align is not None:
+            center = align[0] @ center + align[1]
+        res['minus'] = {
+            'center': center,
+            'dir': dir
+        }
+    else:
+        raise Exception(RuntimeError)
+    return res
+
+
 def plot_nbo(nboname, color="#377eb8", reverse=False, nbodir="./calcfiles", align=None):
     files = get_mcubes_templates(nboname, nbodir)
-    print(repr(files))
+    # print(repr(files))
     if len(files) > 2 or len(files) < 1:
         raise Exception("Unexpected number of %s_*.wrl files" % nboname)
 
