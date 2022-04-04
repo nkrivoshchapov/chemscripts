@@ -1,5 +1,5 @@
 import numpy as np
-import os, copy, time, ntpath
+import os, copy, time, ntpath, subprocess
 from numpy.linalg import norm
 import distutils.spawn
 
@@ -477,3 +477,24 @@ def check_availability(name):
         return False
     else:
         return True
+
+def _goodvibes_extractG(line):
+    parts = line.split(" ")
+    vals=[]
+    for part in parts:
+        if len(part) > 0:
+            vals.append(part)
+    return vals[len(vals)-1].replace("\\r", "")
+
+def get_goodvibes_g(filename, conc=1.0):
+    print("Doing GoodVibes calc for " + filename)
+    sseq = ['python','-m','goodvibes','-q','-t 273.15','-c %f' % conc,'--invertifreq=-15', filename]
+    print("Command line: " + " ".join(sseq))
+    out = subprocess.run(sseq, stdout=subprocess.PIPE)
+    outlines = str(out.stdout).split("\\n")
+    ener = ""
+    for i in range(0,len(outlines)):
+        if "***" in outlines[i]:
+            ener = _goodvibes_extractG(outlines[i+1])
+            break
+    return float(ener)

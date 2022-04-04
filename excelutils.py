@@ -2,6 +2,7 @@ from openpyxl import load_workbook, Workbook
 import openpyxl.utils as opxutils
 import xlcalculator as xlc
 
+
 class ExcelSheet:
     def __init__(self):
         self.datablocks = []

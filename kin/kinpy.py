@@ -2,30 +2,48 @@ import sys
 from numpy import exp
 from math import log
 from openpyxl import load_workbook, Workbook
+from .equations import _parse_equation
+from .names import Names
 
+
+h = 6.62607E-34
+k = 1.38065E-23
+T = 273.15
+R = 0.001987204
 def rateconst(dG):
     return k*T/h*exp(-dG/T/R)
 
-def sgn(bo):
-    if bo:
-        return -1
-    else:
-        return 1
 
-def kinpy_main(inpfile, ofname, mols=None, eqs=None):
-    if inpfile is not None:
-        st = open(inpfile, "r").read()
-        eq_list = st.splitlines()
-    else:
-        eq_list = [item["tline"] for item in eqs]
-    of = open(ofname, "w")
+def _get_c0(datalist, molname):
+    res = None
+    for item in datalist:
+        if item[Names.MOLNAME_COL] == molname:
+            res = item[Names.CO_COL]
+    assert res is not None
+    return res
+
+def create_script(sheet):
+    eq_block_idx = None
+    for i, db in enumerate(sheet.datablocks):
+        if db['name'] == Names.EQ_BLOCK:
+            eq_block_idx = i
+    assert eq_block_idx is not None
+
+    mol_block_idx = None
+    for i, db in enumerate(sheet.datablocks):
+        if db['name'] == Names.MOL_BLOCK:
+            mol_block_idx = i
+    assert mol_block_idx is not None
+
+    eq_list = []
+    for item in sheet.datablocks[eq_block_idx]['data']:
+        fixed_line, _, _ = _parse_equation(item[Names.EQ_COL])
+        eq_list.append(fixed_line.replace("+", " + ").replace("<->", " <-> "))
 
     chem_dict = {}
     reac_dict = {}
     i = -1
     j = -1
-
-    R = True
 
     reac_list = []
 
@@ -99,12 +117,8 @@ def kinpy_main(inpfile, ofname, mols=None, eqs=None):
             for term in prod:
                 v_str += term[1] + "**" + str(term[0]) + " * "
             v_str = v_str[0:-3]
-            if eqs is not None:
-                v_str += "\nk%d = %.15E" % (j, rateconst(eqs[eq_idx]["ea_f"]))
-                v_str += "\nk%dr = %.15E" % (j, rateconst(eqs[eq_idx]["ea_b"]))
-            else:
-                v_str += "\nk%d = 1.0"
-                v_str += "\nk%dr = 1.0"
+            v_str += "\nk%d = %.15E" % (j, rateconst(sheet.datablocks[eq_block_idx]['data'][eq_idx][Names.FORW_COL]))
+            v_str += "\nk%dr = %.15E" % (j, rateconst(sheet.datablocks[eq_block_idx]['data'][eq_idx][Names.BACKW_COL]))
             reac_list.append(v_str)
 
     ofstr = "from numpy import *\nimport scipy.integrate as itg\n\n"
@@ -126,18 +140,13 @@ def kinpy_main(inpfile, ofname, mols=None, eqs=None):
     ofstr += ost
     ofstr += "\n\n#Initial concentrations:\ny0 = array([\\\n"
     for n in range(0, i + 1):
+        c0 = _get_c0(sheet.datablocks[mol_block_idx]['data'], chem_dict_r[n])
         if n != i:
             ofstr += "#" + chem_dict_r[n] + "\n"
-            if mols is not None:
-                ofstr += "%f,\\\n" % mols[chem_dict_r[n]]
-            else:
-                ofstr += "%f,\\\n" % 1.0
+            ofstr += "%f,\\\n" % c0
         else:
             ofstr += "#" + chem_dict_r[n] + "\n"
-            if mols is not None:
-                ofstr += "%f,\\\n])\n\n" % mols[chem_dict_r[n]]
-            else:
-                ofstr += "%f,\\\n])\n\n" % 1.0
+            ofstr += "%f,\\\n])\n\n" % c0
 
     for term in reac_list:
         ofstr += term + "\n\n"
@@ -167,6 +176,4 @@ while mainT < 3600000:
         count = 0
     mainT += 1
 csvfile.close()""".format(mols='","'.join([chem_dict_r[n] for n in range(0, i + 1)]))
-
-    of.write(ofstr)
-    of.close()
+    return ofstr
