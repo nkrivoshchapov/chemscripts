@@ -39,7 +39,7 @@ class ExcelSheet:
         if oldfile is None:
             wb = Workbook()
             ws = wb.active
-            sheetname = "Main page"
+            sheetname = "Main"
             ws.title = sheetname
         else:
             wb = load_workbook(filename=oldfile)
