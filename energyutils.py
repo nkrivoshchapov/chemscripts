@@ -17,6 +17,7 @@ def get_energy_sheet(filemask=None, excelsheet=None):
         excelsheet = ExcelSheet()
         excelsheet.add_block(blockname=_Names.ENERGY_BLOCK,
                              cols=[_Names.LOGNAME_COL,
+                                   _Names.C0_COL,
                                    _Names.QH_ENERGY_COL])
 
         for file in glob.glob(filemask):
