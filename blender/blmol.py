@@ -272,7 +272,7 @@ class Bond:
         """
 
         loc_corr = tuple(c*UNIT_CONV[units] for c in location)
-        len_corr = length * UNIT_CONV[units]
+        len_corr = length * UNIT_CONV[units] * 0.999
         radius_corr = radius * UNIT_CONV[units]
 
         bpy.ops.mesh.primitive_cylinder_add(vertices=vertices,
