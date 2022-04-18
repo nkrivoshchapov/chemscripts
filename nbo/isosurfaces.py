@@ -9,7 +9,7 @@ def nbo_to_idx(nbo, reorder_nbo):
     return reorder_nbo.index(nbo)
 
 
-CUBENPROC = 6
+CUBENPROC = 1
 def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger, wait=False, nbo_reorder=True):
     # cubename is expected to have {nbo} at least in cases when len(nbo_indices) > 1
     logger.info("Processing logfile " + logname)
@@ -31,12 +31,14 @@ def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger,
         nbo_indices[i]['gauss'] += 1 # Indexing in cubegen start with 1
 
     waittasks = []
+    cubefiles = []
     for nbo in nbo_indices:
         if "{nbo}" in cubename:
             newcube = cubename.format(nbo=nbo['real'])
         else:
             assert len(nbo_indices) == 1
             newcube = cubename
+        cubefiles.append(newcube)
         logger.info("Generating cubefile %s" % newcube)
         command = 'cubegen {nproc} MO={corr_idx} {fchk} {cube} 150'.format(
                 nproc=CUBENPROC, corr_idx=nbo['gauss'], fchk=fchkname, cube=newcube)
@@ -51,7 +53,7 @@ def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger,
                                          })
     if wait:
         wait_for_termination(waittasks, gdriver)
-    return waittasks
+    return waittasks, cubefiles
 
 
 BOHR2A = 0.529177
