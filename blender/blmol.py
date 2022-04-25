@@ -2,6 +2,7 @@
 
 import numpy as np
 import time
+from enum import Enum
 
 # Python outside of Blender doesn't play all that well with bpy, so need
 # to handle ImportError.
@@ -116,6 +117,10 @@ UNIT_CONV = {
     'nm': 0.1,
     'A': 1.0
     }
+
+class BONDTYPE(Enum):
+    NORMAL = 1
+    DASHED = 2
 
 
 def _create_new_material(name, color):
@@ -237,9 +242,10 @@ class Bond:
         atom2 (atom): The second atom in the bond.
     """
 
-    def __init__(self, atom1, atom2):
+    def __init__(self, atom1, atom2, bondtype):
         self.atom1 = atom1
         self.atom2 = atom2
+        self.bondtype = bondtype
 
     @staticmethod
     def _draw_half(location, length, rot_angle, rot_axis, element,
@@ -272,7 +278,7 @@ class Bond:
         """
 
         loc_corr = tuple(c*UNIT_CONV[units] for c in location)
-        len_corr = length * UNIT_CONV[units]
+        len_corr = length * UNIT_CONV[units] * 0.999
         radius_corr = radius * UNIT_CONV[units]
 
         bpy.ops.mesh.primitive_cylinder_add(vertices=vertices,
@@ -289,14 +295,14 @@ class Bond:
         rot_matrix_x = rot_matrix_x/np.linalg.norm(rot_matrix_x)
         rot_matrix = [rot_matrix_x, rot_matrix_y, rot_matrix_z]
 
-        ov = bpy.context.copy()
-        ov['area'] = [a for a in bpy.context.screen.areas if a.type == "VIEW_3D"][0]
-        bpy.ops.transform.rotate(ov, value=rot_angle, orient_axis='Z',
-                                 orient_matrix=rot_matrix,
-                                 constraint_axis=(False, False, True))
-        # bpy.ops.transform.rotate(value=rot_angle, orient_axis='Z',
+        # ov = bpy.context.copy()
+        # ov['area'] = [a for a in bpy.context.screen.areas if a.type == "VIEW_3D"][0]
+        # bpy.ops.transform.rotate(ov, value=rot_angle, orient_axis='Z',
         #                          orient_matrix=rot_matrix,
         #                          constraint_axis=(False, False, True))
+        bpy.ops.transform.rotate(value=rot_angle, orient_axis='Z',
+                                 orient_matrix=rot_matrix,
+                                 constraint_axis=(False, False, True))
         bpy.ops.object.shade_smooth()
 
         if edge_split:
@@ -356,21 +362,36 @@ class Bond:
             print("Changed radius")
             radius = 0.05
 
-        if self.atom1.at_num != self.atom2.at_num:
-            start_center = (self.atom1.location + center_loc)/2
-            created_objects.append(Bond._draw_half(start_center, length/2, angle,
-                                   rot_axis, self.atom1.at_num, radius, color,
-                                   units, vertices, edge_split))
+        def draw_dash(position, length, atom_for_color, radius_factor=1):
+            created_objects.append(Bond._draw_half(position, length, angle,
+                                                   rot_axis, atom_for_color.at_num, radius * radius_factor, color,
+                                                   units, vertices, edge_split))
 
-            end_center = (self.atom2.location + center_loc)/2
-            created_objects.append(Bond._draw_half(end_center, length/2, angle,
-                                   rot_axis, self.atom2.at_num, radius, color,
-                                   units, vertices, edge_split))
-        else:
-            start_center = (self.atom1.location + center_loc) / 2
-            created_objects.append(Bond._draw_half(center_loc, length, angle,
-                                   rot_axis, self.atom1.at_num, radius, color,
-                                   units, vertices, edge_split))
+        if self.bondtype == BONDTYPE.NORMAL:
+            if self.atom1.at_num != self.atom2.at_num:
+                start_center = (self.atom1.location + center_loc)/2
+                draw_dash(start_center, length / 2, self.atom1)
+
+                end_center = (self.atom2.location + center_loc)/2
+                draw_dash(end_center, length / 2, self.atom2)
+            else:
+                draw_dash(center_loc, length, self.atom1)
+        elif self.bondtype == BONDTYPE.DASHED:
+            nparts = 20
+            length_step = length / nparts
+            segments = [(self.atom2.location + bond_axis * length_step * i,
+                         self.atom2.location + bond_axis * length_step * (i + 1))
+                        for i in range(nparts)]
+            even = False
+            for i, segment in enumerate(segments):
+                half_way = i >= int(nparts / 2)
+                if half_way:
+                    color_atom = self.atom1
+                else:
+                    color_atom = self.atom2
+                if even:
+                    draw_dash((segment[0] + segment[1]) / 2, length_step, color_atom, radius_factor=0.7)
+                even = not even # Alternation of dashes and empty spaces
 
         # Deselect all objects in scene.
         for obj in bpy.context.selected_objects:
@@ -414,11 +435,12 @@ class Molecule:
         """Adds an atom to the molecule."""
         self.atoms.append(atom)
 
-    def add_bond(self, a1id, a2id):
+    def add_bond(self, a1id, a2id, bondtype=BONDTYPE.NORMAL):
         """Adds a bond to the molecule, using atom ids."""
         if not self.search_bondids(a1id, a2id):
             self.bonds.append(Bond(self.search_atomid(a1id),
-                                   self.search_atomid(a2id)))
+                                   self.search_atomid(a2id),
+                                   bondtype))
 
     def search_atomid(self, id_to_search):
         """Searches through atom list and returns atom object
@@ -622,6 +644,12 @@ class Molecule:
         
         for i in range(4 + natoms, 4 + natoms + nbonds):
             parts = sdflines[i].replace("\n", "").split()
-            at1 = int(sdflines[i][0:3])
-            at2 = int(sdflines[i][3:7])
-            self.add_bond(at1, at2)
+            at1 = int(parts[0])
+            at2 = int(parts[1])
+            bondtype = int(parts[2])
+            if bondtype == 1:
+                self.add_bond(at1, at2, bondtype=BONDTYPE.NORMAL)
+            elif bondtype == 9:
+                self.add_bond(at1, at2, bondtype=BONDTYPE.DASHED)
+            else:
+                raise Exception(NotImplemented)

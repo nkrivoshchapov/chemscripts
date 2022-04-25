@@ -70,7 +70,7 @@ def get_nbo_directions(nboname, nbodir, align=None):
     return res
 
 
-def plot_nbo(nboname, color="#377eb8", reverse=False, nbodir="./calcfiles", align=None):
+def plot_nbo(nboname, color="#377eb8", reverse=False, nbodir="./calcfiles", align=None, wavy=False):
     files = get_mcubes_templates(nboname, nbodir)
     # print(repr(files))
     if len(files) > 2 or len(files) < 1:
@@ -80,8 +80,12 @@ def plot_nbo(nboname, color="#377eb8", reverse=False, nbodir="./calcfiles", alig
         plusmat = get_orbital_material(color, 1)
         minusmat = get_orbital_material(color, -1)
     elif isinstance(color, list) and len(color) == 2:
-        plusmat = get_wavy_material(color, 1)
-        minusmat = get_wavy_material(color, -1)
+        if wavy:
+            plusmat = get_wavy_material(color, 1)
+            minusmat = get_wavy_material(color, -1)
+        else:
+            plusmat = get_orbital_material(color[0], 1)
+            minusmat = get_orbital_material(color[1], -1)
     else:
         raise Exception("Unsupported color datatype")
 

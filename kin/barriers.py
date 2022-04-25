@@ -52,7 +52,7 @@ def obtain_barriers(sheet):
             barrier_cell = sheet.datablocks[eq_block_idx]['cells'][eq_idx][Names.FAKEB_COL]
             dg = "(%s)-(%s)" % (_sumup(sheet.datablocks[mol_block_idx]['cells'], product_idxs, Names.E_COL),
                                 _sumup(sheet.datablocks[mol_block_idx]['cells'], reagent_idxs, Names.E_COL))
-            sheet.datablocks[eq_block_idx]['data'][eq_idx][Names.FORW_COL] = "={fb}+{H2KC}*({dg}-ABS({dg}))".format(
+            sheet.datablocks[eq_block_idx]['data'][eq_idx][Names.FORW_COL] = "={fb}+{H2KC}*({dg}-ABS({dg}))/2".format(
                                                                             H2KC=H2KC, fb=barrier_cell, dg=dg)
-            sheet.datablocks[eq_block_idx]['data'][eq_idx][Names.BACKW_COL] = "={fb}-{H2KC}*({dg}+ABS({dg}))".format(
+            sheet.datablocks[eq_block_idx]['data'][eq_idx][Names.BACKW_COL] = "={fb}-{H2KC}*({dg}+ABS({dg}))/2".format(
                                                                             H2KC=H2KC, fb=barrier_cell, dg=dg)
