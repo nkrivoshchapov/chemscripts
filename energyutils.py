@@ -25,13 +25,8 @@ def get_energy_sheet(filemask=None, excelsheet=None):
                                     _Names.LOGNAME_COL: file,
                                     _Names.C0_COL: 1.0})
 
-    ener_block_idx = None
-    for i, db in enumerate(excelsheet.datablocks):
-        if db['name'] == _Names.ENERGY_BLOCK:
-            ener_block_idx = i
-    assert ener_block_idx is not None
-
-    for item in excelsheet.datablocks[ener_block_idx]['data']:
+    energy_block = excelsheet.block(_Names.ENERGY_BLOCK)
+    for item in energy_block['data']:
         item[_Names.QH_ENERGY_COL] = get_goodvibes_g(item[_Names.LOGNAME_COL], conc=item[_Names.C0_COL])
     return excelsheet
 

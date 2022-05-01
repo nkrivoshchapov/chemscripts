@@ -1,7 +1,4 @@
-import sys
 from numpy import exp
-from math import log
-from openpyxl import load_workbook, Workbook
 from .equations import _parse_equation
 from .names import Names
 
@@ -19,24 +16,17 @@ def _get_c0(datalist, molname):
     for item in datalist:
         if item[Names.MOLNAME_COL] == molname:
             res = item[Names.CO_COL]
+            break
     assert res is not None
     return res
 
-def create_script(sheet):
-    eq_block_idx = None
-    for i, db in enumerate(sheet.datablocks):
-        if db['name'] == Names.EQ_BLOCK:
-            eq_block_idx = i
-    assert eq_block_idx is not None
 
-    mol_block_idx = None
-    for i, db in enumerate(sheet.datablocks):
-        if db['name'] == Names.MOL_BLOCK:
-            mol_block_idx = i
-    assert mol_block_idx is not None
+def create_script(sheet, resfile="res.csv", timestep=0.01, maxtime=60):
+    eq_block = sheet.block(Names.EQ_BLOCK)
+    mol_block = sheet.block(Names.MOL_BLOCK)
 
     eq_list = []
-    for item in sheet.datablocks[eq_block_idx]['data']:
+    for item in eq_block['data']:
         fixed_line, _, _ = _parse_equation(item[Names.EQ_COL])
         eq_list.append(fixed_line.replace("+", " + ").replace("<->", " <-> "))
 
@@ -117,11 +107,11 @@ def create_script(sheet):
             for term in prod:
                 v_str += term[1] + "**" + str(term[0]) + " * "
             v_str = v_str[0:-3]
-            v_str += "\nk%d = %.15E" % (j, rateconst(sheet.datablocks[eq_block_idx]['data'][eq_idx][Names.FORW_COL]))
-            v_str += "\nk%dr = %.15E" % (j, rateconst(sheet.datablocks[eq_block_idx]['data'][eq_idx][Names.BACKW_COL]))
+            v_str += "\nk%d = %.15E" % (j, rateconst(eq_block['data'][eq_idx][Names.FORW_COL]))
+            v_str += "\nk%dr = %.15E" % (j, rateconst(eq_block['data'][eq_idx][Names.BACKW_COL]))
             reac_list.append(v_str)
 
-    ofstr = "from numpy import *\nimport scipy.integrate as itg\n\n"
+    ofstr = "from numpy import *\nimport scipy.integrate as itg\nimport os\n\n"
     chem_dict_r = {}
     for term in chem_dict:
         chem_dict_r.update({chem_dict[term] : term})
@@ -140,7 +130,7 @@ def create_script(sheet):
     ofstr += ost
     ofstr += "\n\n#Initial concentrations:\ny0 = array([\\\n"
     for n in range(0, i + 1):
-        c0 = _get_c0(sheet.datablocks[mol_block_idx]['data'], chem_dict_r[n])
+        c0 = _get_c0(mol_block['data'], chem_dict_r[n])
         if n != i:
             ofstr += "#" + chem_dict_r[n] + "\n"
             ofstr += "%f,\\\n" % c0
@@ -151,29 +141,35 @@ def create_script(sheet):
     for term in reac_list:
         ofstr += term + "\n\n"
 
-    ofstr += """mainT = 0
-csvfile=open("res.csv","w")
+    ofstr += """TIMESTEP = {timestep} # sec
+MAXTIME = {maxtime} # sec
+RESFILE = "{resfile}"
+os.remove(RESFILE)
+csvfile=open(RESFILE, 'a')
 csvfile.write(";".join(["{mols}"])+"\\n")
-csvfile.close()
-csvfile=open("res.csv","a")
-count = 0
-count2 = 0
-while mainT < 3600000:
-    count += 1
-    count2 += 1
-    t = arange(0, 0.2, 0.1)
+
+mainT = 0
+print_count = 0
+write_count = 0
+while mainT < MAXTIME:
+    print_count += 1
+    write_count += 1
+    mainT += TIMESTEP
+    t = arange(0, 2 * TIMESTEP, TIMESTEP)
     Y = itg.odeint(dy, y0, t)
-    y0 = Y[len(Y)-1]
-    
-    y00= []
-    for i in y0:
-        y00.append(str(i))
-    if count2 == 20:
-        csvfile.write(";".join(y00)+"\\n")
-        count2 = 0
-    if count == 1000:
-        print(str(mainT/360000)+"%    " + repr(y0))
-        count = 0
-    mainT += 1
-csvfile.close()""".format(mols='","'.join([chem_dict_r[n] for n in range(0, i + 1)]))
+    y0 = Y[Y.shape[0] - 1]
+    y0_str = [str(i) for i in y0]
+
+    if write_count == 20:
+        csvfile.write(";".join(y0_str)+"\\n")
+        write_count = 0
+    if print_count == 1000:
+        print("%f seconds have passed (%f %%)\\nConcentrations = %s" % (mainT, mainT/MAXTIME*100, ",".join(y0_str)))
+        print_count = 0
+csvfile.close()
+""".format(mols='","'.join([chem_dict_r[n] for n in range(0, i + 1)]),
+                          timestep=timestep,
+                          maxtime=maxtime,
+                          resfile=resfile
+                          )
     return ofstr

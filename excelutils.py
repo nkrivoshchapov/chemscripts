@@ -6,34 +6,33 @@ import xlcalculator as xlc
 class ExcelSheet:
     def __init__(self):
         self.datablocks = []
+        self.blocknames = []
+
+    def block(self, name):
+        return self.datablocks[self.blocknames.index(name)]
 
     def add_block(self, blockname, cols=None):
-        for item in self.datablocks:
-            assert blockname != item['name']
+        assert blockname not in self.blocknames
         newblock = {'name': blockname, 'data': []}
         if cols is None:
             newblock['keys'] = []
         else:
             newblock['keys'] = cols
         self.datablocks.append(newblock)
+        self.blocknames.append(blockname)
 
     def add_row(self, blockname, data):
-        block_idx = None
-        for i, block in enumerate(self.datablocks):
-            if block['name'] == blockname:
-                block_idx = i
-        assert block_idx is not None
-
+        current_block = self.block(blockname)
         for key in data.keys():
-            assert key in self.datablocks[block_idx]['keys']
+            assert key in current_block['keys']
 
         newitem = {}
-        for key in self.datablocks[block_idx]['keys']:
+        for key in current_block['keys']:
             if key in data:
                 newitem[key] = data[key]
             else:
                 newitem[key] = None
-        self.datablocks[block_idx]['data'].append(newitem)
+        current_block['data'].append(newitem)
 
     def save_xlsx(self, filename, oldfile=None):
         if oldfile is None:
@@ -44,7 +43,6 @@ class ExcelSheet:
         else:
             wb = load_workbook(filename=oldfile)
             ws = wb.active
-            sheetname = ws.title
 
         i = 1
         for datablock in self.datablocks:
@@ -127,6 +125,7 @@ class ExcelSheet:
                           'data': data,
                           'cells': cells}
             self.datablocks.append(newsection)
+            self.blocknames.append(section_name)
 
     @staticmethod
     def get_cell_name(row, col, sheetname):

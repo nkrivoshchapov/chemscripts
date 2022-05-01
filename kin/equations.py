@@ -42,12 +42,8 @@ def equations_from_k(filename):
 
 def equations_from_sheet(sheet):
     eqs = []
-    eq_idx = None
-    for i, db in enumerate(sheet.datablocks):
-        if db['name'] == Names.EQ_BLOCK:
-            eq_idx = i
-    assert eq_idx is not None
-    for item in sheet.datablocks[eq_idx]['data']:
+    eq_block = sheet.block(Names.EQ_BLOCK)
+    for item in eq_block['data']:
         fixed_line, reagents, products = _parse_equation(item[Names.EQ_COL])
         eqs.append({
             'original_line': fixed_line,
