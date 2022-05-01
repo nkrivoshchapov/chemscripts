@@ -2,7 +2,7 @@ import numpy as np
 import mcubes, sklearn.decomposition
 import glob, os
 
-from myscripts.utils import wait_for_termination
+from chemscripts.utils import wait_for_termination
 
 
 def nbo_to_idx(nbo, reorder_nbo):

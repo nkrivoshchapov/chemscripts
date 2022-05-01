@@ -1,5 +1,5 @@
 from .names import Names
-
+import chemscripts.excelutils as xl
 
 def _parse_equation(eq):
     fixed_line = eq.replace('\n', '').replace('\r', '').replace(' ', '')
@@ -60,3 +60,21 @@ def molecules_from_equations(eqs):
             if mol['name'] not in mols:
                 mols.append(mol['name'])
     return mols
+
+def initialize_sheet(mols, eqs):
+    excelsheet = xl.ExcelSheet()
+    excelsheet.add_block(blockname=Names.EQ_BLOCK,
+                         cols=[Names.EQ_COL,
+                               Names.TSENER_COL,
+                               Names.FAKEB_COL,
+                               Names.FORW_COL,
+                               Names.BACKW_COL])
+    excelsheet.add_block(blockname=Names.MOL_BLOCK,
+                         cols=[Names.MOLNAME_COL,
+                               Names.CO_COL,
+                               Names.E_COL])
+    for mol in mols:
+        excelsheet.add_row(blockname=Names.MOL_BLOCK, data={Names.MOLNAME_COL: mol})
+    for eq in eqs:
+        excelsheet.add_row(blockname=Names.EQ_BLOCK, data={Names.EQ_COL: eq['original_line']})
+    return excelsheet

@@ -1,5 +1,5 @@
 import multiprocessing, threading, subprocess, time, os, ntpath
-from myscripts import utils
+from chemscripts import utils
 
 MAXTRIES = 3
 SLEEP_DURATION = 0.1
