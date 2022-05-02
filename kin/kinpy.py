@@ -144,7 +144,8 @@ def create_script(sheet, resfile="res.csv", timestep=0.01, maxtime=60):
     ofstr += """TIMESTEP = {timestep} # sec
 MAXTIME = {maxtime} # sec
 RESFILE = "{resfile}"
-os.remove(RESFILE)
+if os.path.exists(RESFILE):
+    os.remove(RESFILE)
 csvfile=open(RESFILE, 'a')
 csvfile.write(";".join(["{mols}"])+"\\n")
 
