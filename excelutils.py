@@ -3,6 +3,19 @@ import openpyxl.utils as opxutils
 import xlcalculator as xlc
 
 
+def fix_xlsx(filename):
+    excelsheet = ExcelSheet()
+    excelsheet.read_xlsx(filename, get_values=False)
+    for block in excelsheet.datablocks:
+        keys = block['keys']
+        for item in block['data']:
+            for key in keys:
+                if isinstance(item[key], str):
+                    item[key] = item[key].replace('$', '')
+    newname = filename.replace('.xlsx', '_fixed.xlsx')
+    excelsheet.save_xlsx(newname, oldfile=filename)
+    return newname
+
 class ExcelSheet:
     def __init__(self):
         self.datablocks = []
@@ -73,6 +86,8 @@ class ExcelSheet:
                     i += 1
                 i += 1  # One empty row between sections
         wb.save(filename)
+
+    
 
     def read_xlsx(self, filename, get_values=False):
         self.datablocks = []

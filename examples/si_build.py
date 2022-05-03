@@ -75,14 +75,16 @@ if __name__ == "__main__":
         excelsheet.save_xlsx(tablename.replace('.xlsx', '_enum.xlsx'), oldfile=tablename)
     elif sys.argv[1].endswith(".xlsx") and "build" in sys.argv:
         tablename = sys.argv[1]
+        newname = xl.fix_xlsx(tablename)
         excelsheet = xl.ExcelSheet()
-        excelsheet.read_xlsx(tablename, get_values=True)
-
+        excelsheet.read_xlsx(newname, get_values=True)
+        print(repr(excelsheet.datablocks))
         xyzdata = [] # each element (string) corresponds to different structure
         for block in excelsheet.datablocks:
             assert block['name'] in Names.FORMATS.keys()
             for item in block['data']:
                 keys = [t[1] for t in string.Formatter().parse(Names.FORMATS[block['name']]) if t[1] is not None]
+                # print(repr(item))
                 description_values = {}
                 for key in keys:
                     sheet_key = None
@@ -90,7 +92,11 @@ if __name__ == "__main__":
                         sheet_key = getattr(ener._Names, key) # SCF_ENERGY_COL and QH_ENERGY_COL are assigned here
                     elif hasattr(Names, key):
                         sheet_key = getattr(Names, key)
-                    description_values[key] = item[sheet_key]
+                    
+                    if isinstance(item[sheet_key], float):
+                        description_values[key] = "%12.8f" % item[sheet_key]
+                    else:
+                        description_values[key] = item[sheet_key]
                 description = Names.FORMATS[block['name']].format(**description_values)
                 
                 print("Reading geometry from " + os.path.join(item[Names.DIR_COL], item[Names.NAME_COL]))
