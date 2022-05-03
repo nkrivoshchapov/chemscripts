@@ -11,18 +11,22 @@ class Names(object):
     NAME_COL = "Logname"
     IDX_COL = "Index"
     TYPE_COL = "Type"
-    SCF_ENERGY_COL = "E, a.u." # These are duplicates from ener._Names - not very nice
-    QH_ENERGY_COL = "QH free energy, a.u." # These are duplicates from ener._Names - not very nice
 
     # The values below are optional, they depend on the data you want the xyz-file to contain
     INTERM_BLOCK = "Intermediates"
     REL_ENERGY_COL = "dG relative, kcal/mol"
-    TS_BLOCK = "Transition state"
+    TS_BLOCK = "Transition states"
     EA_ENERGY_COL = "dG of activation, a.u."
+    DESCR_COL = "Description"
+    CHR_COL = "Charge"
+    MULT_COL = "Multiplicity"
     FORMATS = {
-        INTERM_BLOCK: "Intermediate IM{IDX_COL}; Electronic energy = {SCF_ENERGY_COL} a.u.; Free energy = {QH_ENERGY_COL} a.u.; Relative energy = {REL_ENERGY_COL} kcal/mol",
-        TS_BLOCK: "Transition state TS{IDX_COL}; Electronic energy = {SCF_ENERGY_COL} a.u.; Free energy = {QH_ENERGY_COL} a.u.; Activation free energy = {EA_ENERGY_COL} kcal/mol",
+        INTERM_BLOCK: "{DESCR_COL}; Molecule {IDX_COL}; Chrg={CHR_COL}; Mult={MULT_COL}; Electronic energy={SCF_ENERGY_COL} a.u.; Free energy={QH_ENERGY_COL} a.u.; Relative energy={REL_ENERGY_COL} kcal/mol",
+        TS_BLOCK: "{DESCR_COL}; Transition state {IDX_COL}; Chrg={CHR_COL}; Mult={MULT_COL}; Electronic energy={SCF_ENERGY_COL} a.u.; Free energy={QH_ENERGY_COL} a.u.; Activation free energy={EA_ENERGY_COL} kcal/mol",
     }
+    
+    # These columns will be added automatically (in the same order from left to right)
+    ADD_COLUMNS = [DESCR_COL, CHR_COL, MULT_COL, TYPE_COL, IDX_COL]
 
 
 if __name__ == "__main__":
@@ -34,6 +38,10 @@ if __name__ == "__main__":
     if len(sys.argv) == 1: # No args
         excelsheet = ener.get_energy_sheet(LOG_PATHS, get_scf=True)
         excelsheet.remove_key(ener._Names.ENERGY_BLOCK, ener._Names.C0_COL) # Delete concentration column
+
+        # Add requested keys
+        for key in reversed(Names.ADD_COLUMNS):
+            excelsheet.add_key(ener._Names.ENERGY_BLOCK, key, position=0)
 
         # Split filenames into two columns
         excelsheet.add_key(ener._Names.ENERGY_BLOCK, Names.NAME_COL, position=0)
@@ -64,7 +72,7 @@ if __name__ == "__main__":
                 item[Names.IDX_COL] = counters[cur_type]
 
         print("Total number of structures of each type: " + repr(counters))
-        excelsheet.save_xlsx(tablename.replace('.xlsx', '_enum.xlsx'))
+        excelsheet.save_xlsx(tablename.replace('.xlsx', '_enum.xlsx'), oldfile=tablename)
     elif sys.argv[1].endswith(".xlsx") and "build" in sys.argv:
         tablename = sys.argv[1]
         excelsheet = xl.ExcelSheet()
@@ -79,12 +87,13 @@ if __name__ == "__main__":
                 for key in keys:
                     sheet_key = None
                     if hasattr(ener._Names, key):
-                        sheet_key = getattr(ener._Names, key)
+                        sheet_key = getattr(ener._Names, key) # SCF_ENERGY_COL and QH_ENERGY_COL are assigned here
                     elif hasattr(Names, key):
                         sheet_key = getattr(Names, key)
-                        description_values[key] = item[sheet_key]
+                    description_values[key] = item[sheet_key]
                 description = Names.FORMATS[block['name']].format(**description_values)
-
+                
+                print("Reading geometry from " + os.path.join(item[Names.DIR_COL], item[Names.NAME_COL]))
                 xyzs, syms = utils.parse_log(os.path.join(item[Names.DIR_COL], item[Names.NAME_COL]))
                 xyzdata.append(utils.to_xyz(xyzs, syms, description=description))
 

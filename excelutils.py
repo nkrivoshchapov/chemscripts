@@ -12,7 +12,10 @@ class ExcelSheet:
         return self.datablocks[self.blocknames.index(name)]
 
     def add_key(self, blockname, key, position=0):
-        self.block(blockname)['keys'].insert(position, key)
+        curblock = self.block(blockname)
+        curblock['keys'].insert(position, key)
+        for item in curblock['data']:
+            item[key] = None
 
     def remove_key(self, blockname, key):
         block = self.block(blockname)
