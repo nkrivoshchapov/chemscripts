@@ -164,18 +164,21 @@ def write_gjf(xyzs, syms, template_name, filename, subs={}):
         f.write(gjf_string)
 
 
-def write_xyz(xyzs, syms, filename):
-    xyz_parts = [str(len(xyzs)), ""]
+def to_xyz(xyzs, syms, description=""):
+    xyz_parts = [str(len(xyzs)), description]
     for i in range(len(xyzs)):
         xyz_parts.append("%2s %14.6f %14.6f %14.6f" % (
-                                         syms[i],
-                                         xyzs[i][0],
-                                         xyzs[i][1],
-                                         xyzs[i][2]
-                         ))
-    xyz_string = '\n'.join(xyz_parts)
+            syms[i],
+            xyzs[i][0],
+            xyzs[i][1],
+            xyzs[i][2]
+        ))
+    return '\n'.join(xyz_parts)
+
+
+def write_xyz(xyzs, syms, filename, description=""):
     with open(filename, 'w') as f:
-        f.write(xyz_string)
+        f.write(to_xyz(xyzs, syms, description=description))
 
 
 def parse_gjf(file):
@@ -485,6 +488,19 @@ def _goodvibes_extractG(line):
         if len(part) > 0:
             vals.append(part)
     return vals[len(vals)-1].replace("\\r", "")
+
+def get_gaussian_scfener(filename):
+    lines = open(filename, 'r').readlines()
+    scf_e = None
+    normal_termination = False
+    for line in reversed(lines):
+        if "Normal termination" in line:
+            normal_termination = True
+        if "SCF Done" in line:
+            scf_e = float(line.split("=")[1].split("A.U.")[0])
+            break
+    assert normal_termination
+    return scf_e
 
 def get_goodvibes_g(filename, conc=1.0):
     print("Doing GoodVibes calc for " + filename)

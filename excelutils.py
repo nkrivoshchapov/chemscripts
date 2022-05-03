@@ -11,6 +11,15 @@ class ExcelSheet:
     def block(self, name):
         return self.datablocks[self.blocknames.index(name)]
 
+    def add_key(self, blockname, key, position=0):
+        self.block(blockname)['keys'].insert(position, key)
+
+    def remove_key(self, blockname, key):
+        block = self.block(blockname)
+        for item in block['data']:
+            del item[key]
+        block['keys'].remove(key)
+
     def add_block(self, blockname, cols=None):
         assert blockname not in self.blocknames
         newblock = {'name': blockname, 'data': []}
