@@ -105,3 +105,6 @@ if __name__ == "__main__":
 
         with open(XYZ_FILENAME, 'w') as f:
             f.write('\n'.join(xyzdata))
+        
+        print("Removing temporary file " + newname)
+        os.remove(newname)

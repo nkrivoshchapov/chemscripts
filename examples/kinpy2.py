@@ -1,7 +1,7 @@
 from chemscripts import kin
 import chemscripts.excelutils as xl
 from chemscripts.energyutils import energies_to_excel
-import sys
+import sys, os
 
 """
 Can be executed in 4 modes:
@@ -30,13 +30,17 @@ if __name__ == "__main__":
         excelsheet.read_xlsx(firstarg, get_values=True)
         with open(SCRIPTNAME, "w") as f:
             f.write(kin.create_script(excelsheet))
-    elif firstarg.endswith(".xlsx"):
+    elif firstarg.endswith(".xlsx"):        
         excelsheet = xl.ExcelSheet()
         excelsheet.read_xlsx(firstarg)
         kin.obtain_barriers(excelsheet)
         excelsheet.save_xlsx(TABLENAME, oldfile=firstarg)
 
+        newtablename = xl.fix_xlsx(TABLENAME)
         excelsheet = xl.ExcelSheet()
-        excelsheet.read_xlsx(TABLENAME, get_values=True)
+        excelsheet.read_xlsx(newtablename, get_values=True)
         with open(SCRIPTNAME, "w") as f:
             f.write(kin.create_script(excelsheet))
+
+        print("Removing temporary file " + newtablename)
+        os.remove(newtablename)
