@@ -88,6 +88,22 @@ class Molecule:
 
         with open(sdfname, "w") as f:
             f.write("\n".join(lines))
+    
+    def add_dummy(self, position):
+        idx = self.G.number_of_nodes()
+        self.G.add_node(idx)
+        self.G.nodes[idx]['xyz'] = position
+        self.G.nodes[idx]['dummy'] = True
+        # self.G.nodes[idx]['symbol'] = 'He'
+        return idx + 1
+
+    def remove_dummies(self):
+        for i in range(self.G.number_of_nodes()):
+            if 'dummy' in self.G.nodes[i] and self.G.nodes[i]['dummy']:
+                self.G.remove_node(i)
+
+    def atom_xyz(self, idx):
+        return self.G.nodes[idx - 1]['xyz']
 
 
 class Fragment:
