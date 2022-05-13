@@ -5,9 +5,8 @@ from .names import Names
 
 h = 6.62607E-34
 k = 1.38065E-23
-T = 273.15
 R = 0.001987204
-def rateconst(dG):
+def rateconst(dG, T):
     return k*T/h*exp(-dG/T/R)
 
 
@@ -21,9 +20,13 @@ def _get_c0(datalist, molname):
     return res
 
 
-def create_script(sheet, resfile="res.csv", timestep=0.01, maxtime=60):
+def create_script(sheet, resfile="res.csv"):
     eq_block = sheet.block(Names.EQ_BLOCK)
     mol_block = sheet.block(Names.MOL_BLOCK)
+    setup_block = sheet.block(Names.SETUP_BLOCK)
+    assert len(setup_block['data']) == 1, "Expected exactly one row in '%s' table" % Names.SETUP_BLOCK
+    setup_data = setup_block['data'][0]
+    temperature = setup_data[Names.TEMP_COL]
 
     eq_list = []
     for item in eq_block['data']:
@@ -107,8 +110,8 @@ def create_script(sheet, resfile="res.csv", timestep=0.01, maxtime=60):
             for term in prod:
                 v_str += term[1] + "**" + str(term[0]) + " * "
             v_str = v_str[0:-3]
-            v_str += "\nk%d = %.15E" % (j, rateconst(eq_block['data'][eq_idx][Names.FORW_COL]))
-            v_str += "\nk%dr = %.15E" % (j, rateconst(eq_block['data'][eq_idx][Names.BACKW_COL]))
+            v_str += "\nk%d = %.15E" % (j, rateconst(eq_block['data'][eq_idx][Names.FORW_COL], temperature))
+            v_str += "\nk%dr = %.15E" % (j, rateconst(eq_block['data'][eq_idx][Names.BACKW_COL], temperature))
             reac_list.append(v_str)
 
     ofstr = "from numpy import *\nimport scipy.integrate as itg\nimport os\n\n"
@@ -144,10 +147,11 @@ def create_script(sheet, resfile="res.csv", timestep=0.01, maxtime=60):
     ofstr += """TIMESTEP = {timestep} # sec
 MAXTIME = {maxtime} # sec
 RESFILE = "{resfile}"
+NINT = 1
 if os.path.exists(RESFILE):
     os.remove(RESFILE)
 csvfile=open(RESFILE, 'a')
-csvfile.write(";".join(["{mols}"])+"\\n")
+csvfile.write(";".join(["Time, s", "{mols}"])+"\\n")
 
 mainT = 0
 print_count = 0
@@ -156,21 +160,22 @@ while mainT < MAXTIME:
     print_count += 1
     write_count += 1
     mainT += TIMESTEP
-    t = arange(0, 2 * TIMESTEP, TIMESTEP)
+    t = arange(0, (1 + NINT) * TIMESTEP, TIMESTEP)
     Y = itg.odeint(dy, y0, t)
     y0 = Y[Y.shape[0] - 1]
-    y0_str = [str(i) for i in y0]
+    y0_str = [str(mainT)] + [str(i) for i in y0]
 
-    if write_count == 20:
+    if write_count == 1:
         csvfile.write(";".join(y0_str)+"\\n")
         write_count = 0
-    if print_count == 1000:
+    if print_count == 50:
         print("%f seconds have passed (%f %%)\\nConcentrations = %s" % (mainT, mainT/MAXTIME*100, ",".join(y0_str)))
         print_count = 0
 csvfile.close()
-""".format(mols='","'.join([chem_dict_r[n] for n in range(0, i + 1)]),
-                          timestep=timestep,
-                          maxtime=maxtime,
+print("Kinetic modelling of {maxtime} seconds is finished")
+""".format(mols='", "'.join([chem_dict_r[n] for n in range(0, i + 1)]),
+                          timestep=setup_data[Names.STEP_COL],
+                          maxtime=setup_data[Names.MAXTIME_COL],
                           resfile=resfile
                           )
     return ofstr

@@ -73,8 +73,17 @@ def initialize_sheet(mols, eqs):
                          cols=[Names.MOLNAME_COL,
                                Names.CO_COL,
                                Names.E_COL])
-    for mol in mols:
-        excelsheet.add_row(blockname=Names.MOL_BLOCK, data={Names.MOLNAME_COL: mol})
+    excelsheet.add_block(blockname=Names.SETUP_BLOCK,
+                         cols=[Names.TEMP_COL,
+                               Names.STEP_COL,
+                               Names.MAXTIME_COL])
+    
     for eq in eqs:
         excelsheet.add_row(blockname=Names.EQ_BLOCK, data={Names.EQ_COL: eq['original_line']})
+    for mol in mols:
+        excelsheet.add_row(blockname=Names.MOL_BLOCK, data={Names.MOLNAME_COL: mol,
+                                                            Names.CO_COL: 0.0})
+    excelsheet.add_row(blockname=Names.SETUP_BLOCK, data={Names.TEMP_COL: 298.15,
+                                                          Names.STEP_COL: 0.01,
+                                                          Names.MAXTIME_COL: 60,})
     return excelsheet

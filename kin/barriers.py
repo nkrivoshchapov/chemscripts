@@ -3,10 +3,13 @@ from .equations import equations_from_sheet
 from ..utils import H2KC
 
 
-def _sumup(datalist, indices, key):
+def _sumup(datalist, moldata, key):
     res = []
-    for idx in indices:
-        res.append(datalist[idx][key])
+    for idx, coeff in moldata:
+        if coeff == 1:
+            res.append(datalist[idx][key])
+        else:
+            res.append("%d*%s" % (coeff, datalist[idx][key]))
     return "+".join(res)
 
 
@@ -21,19 +24,20 @@ def obtain_barriers(sheet):
         for mol in eq['reagents']:
             for cmol_idx, cmol in enumerate(mol_block['data']):
                 if cmol[Names.MOLNAME_COL] == mol['name']:
-                    reagent_idxs.append(cmol_idx)
+                    reagent_idxs.append((cmol_idx, mol['n']))
                     break
         product_idxs = []
         for mol in eq['products']:
             for cmol_idx, cmol in enumerate(mol_block['data']):
                 if cmol[Names.MOLNAME_COL] == mol['name']:
-                    product_idxs.append(cmol_idx)
+                    product_idxs.append((cmol_idx, mol['n']))
                     break
+        # reagent_idxs and product_idxs contain pairs (Index of molecule in mol_block, stoichiometric coeffs)
 
         have_tsener = eq_block['data'][eq_idx][Names.TSENER_COL]
         have_fakebarrier = eq_block['data'][eq_idx][Names.FAKEB_COL]
-        assert have_fakebarrier or have_tsener, "Not enough data to compute rate constants"
-        assert not (have_fakebarrier and have_tsener), "Have TS energy AND fake barrier. Which one to use?!"
+        assert have_fakebarrier is not None or have_tsener is not None, "Not enough data to compute rate constants"
+        assert not (have_fakebarrier is not None and have_tsener is not None), "Have TS energy AND fake barrier. Which one to use?!"
 
         if have_tsener is not None:
             ts_ener_cell = eq_block['cells'][eq_idx][Names.TSENER_COL]
