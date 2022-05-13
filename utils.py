@@ -426,6 +426,19 @@ def get_angle(points=None, dirs=None):
     angle = np.arccos(np.dot(dir1, dir2))
     return angle * RAD2DEG
 
+def get_vangle(atoms, xyz):
+    assert len(atoms) == 3
+    points = [xyz[i-1] for i in atoms]
+    prevvec = points[0]
+    curvec = points[1]
+    nextvec = points[2]
+    dir1 = prevvec - curvec
+    dir2 = nextvec - curvec
+    dir1 /= norm(dir1)
+    dir2 /= norm(dir2)
+    angle = np.arccos(np.dot(dir1, dir2))
+    return angle * RAD2DEG
+
 def checkout_directory(dirname):
     if not os.path.isdir(dirname):
         os.mkdir(dirname)
@@ -499,7 +512,7 @@ def get_gaussian_scfener(filename):
         if "SCF Done" in line:
             scf_e = float(line.split("=")[1].split("A.U.")[0])
             break
-    assert normal_termination
+    assert normal_termination, "Abnormal termination of " + filename
     return scf_e
 
 def get_goodvibes_g(filename, conc=1.0):

@@ -24,8 +24,6 @@ def get_energy_sheet(filemask=None, excelsheet=None, get_scf=False, get_free=Tru
     assert filemask is not None or excelsheet is not None
     assert not (filemask is not None and excelsheet is not None)
     if filemask is not None:
-
-
         excelsheet = ExcelSheet()
         excelsheet.add_block(blockname=_Names.ENERGY_BLOCK,
                              cols=get_columns(get_scf, get_free))
