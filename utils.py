@@ -371,7 +371,7 @@ def is_normal_termination(logname, inpfile):
             return True
     elif inpfile.endswith(".gjf") and logname.endswith(".log"):
         lines = open(logname, 'r').readlines()
-        for line in reversed(lines):
+        for line in lines[-3:]:
             if "Normal termination" in line:
                 return True
         return False
@@ -489,20 +489,26 @@ def _goodvibes_extractG(line):
             vals.append(part)
     return vals[len(vals)-1].replace("\\r", "")
 
-def get_gaussian_scfener(filename):
+def get_gaussian_scfener(filename, ignore_error_term=False):
+    normal_termination = is_normal_termination(filename, '.gjf')
+    if ignore_error_term and not normal_termination:
+        return "Error"
+    assert normal_termination, "Abnormal Gaussian termination detected!"
+    
     lines = open(filename, 'r').readlines()
     scf_e = None
-    normal_termination = False
     for line in reversed(lines):
-        if "Normal termination" in line:
-            normal_termination = True
         if "SCF Done" in line:
             scf_e = float(line.split("=")[1].split("A.U.")[0])
             break
-    assert normal_termination
     return scf_e
 
-def get_goodvibes_g(filename, conc=1.0):
+def get_goodvibes_g(filename, conc=1.0, ignore_error_term=False):
+    normal_termination = is_normal_termination(filename, '.gjf')
+    if ignore_error_term and not normal_termination:
+        return "Error"
+    assert normal_termination, "Abnormal Gaussian termination detected!"
+
     print("Doing GoodVibes calc for " + filename)
     sseq = ['python','-m','goodvibes','-q','-t 273.15','-c %f' % conc,'--invertifreq=-15', filename]
     print("Command line: " + " ".join(sseq))

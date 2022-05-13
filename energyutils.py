@@ -22,7 +22,7 @@ def get_columns(get_scf: bool):
                 _Names.C0_COL,
                 _Names.QH_ENERGY_COL]
 
-def get_energy_sheet(filemask=None, excelsheet=None, get_scf=False):
+def get_energy_sheet(filemask=None, excelsheet=None, get_scf=False, ignore_error_term=False):
     assert filemask is not None or excelsheet is not None
     assert not (filemask is not None and excelsheet is not None)
     if filemask is not None:
@@ -38,9 +38,9 @@ def get_energy_sheet(filemask=None, excelsheet=None, get_scf=False):
 
     energy_block = excelsheet.block(_Names.ENERGY_BLOCK)
     for item in energy_block['data']:
-        item[_Names.QH_ENERGY_COL] = get_goodvibes_g(item[_Names.LOGNAME_COL], conc=item[_Names.C0_COL])
+        item[_Names.QH_ENERGY_COL] = get_goodvibes_g(item[_Names.LOGNAME_COL], conc=item[_Names.C0_COL], ignore_error_term=ignore_error_term)
         if _Names.SCF_ENERGY_COL in energy_block['keys']:
-            item[_Names.SCF_ENERGY_COL] = get_gaussian_scfener(item[_Names.LOGNAME_COL])
+            item[_Names.SCF_ENERGY_COL] = get_gaussian_scfener(item[_Names.LOGNAME_COL], ignore_error_term=ignore_error_term)
     return excelsheet
 
 
