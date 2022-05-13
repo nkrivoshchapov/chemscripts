@@ -426,6 +426,19 @@ def get_angle(points=None, dirs=None):
     angle = np.arccos(np.dot(dir1, dir2))
     return angle * RAD2DEG
 
+def get_vangle(atoms, xyz):
+    assert len(atoms) == 3
+    points = [xyz[i-1] for i in atoms]
+    prevvec = points[0]
+    curvec = points[1]
+    nextvec = points[2]
+    dir1 = prevvec - curvec
+    dir2 = nextvec - curvec
+    dir1 /= norm(dir1)
+    dir2 /= norm(dir2)
+    angle = np.arccos(np.dot(dir1, dir2))
+    return angle * RAD2DEG
+
 def checkout_directory(dirname):
     if not os.path.isdir(dirname):
         os.mkdir(dirname)
@@ -493,7 +506,7 @@ def get_gaussian_scfener(filename, ignore_error_term=False):
     normal_termination = is_normal_termination(filename, '.gjf')
     if ignore_error_term and not normal_termination:
         return "Error"
-    assert normal_termination, "Abnormal Gaussian termination detected!"
+    assert normal_termination, "Abnormal termination of " + filename
     
     lines = open(filename, 'r').readlines()
     scf_e = None

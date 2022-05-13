@@ -107,8 +107,10 @@ class Molecule:
 
 
 class Fragment:
-    def __init__(self, mol, startatom):
+    def __init__(self, mol, startatom, add_atoms=None):
         self.carried_atoms = nx.node_connected_component(mol.G, startatom - 1) # Numbering of atoms starts from 0
+        if add_atoms is not None:
+            self.carried_atoms.update({i - 1 for i in add_atoms})
         self.G = mol.G.subgraph(self.carried_atoms)
         self.mol = mol
 
