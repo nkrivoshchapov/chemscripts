@@ -81,7 +81,9 @@ if __name__ == "__main__":
         print(repr(excelsheet.datablocks))
         xyzdata = [] # each element (string) corresponds to different structure
         for block in excelsheet.datablocks:
-            assert block['name'] in Names.FORMATS.keys()
+            if block['name'] not in Names.FORMATS.keys():
+                print("WARNING Ignoring '%s' block" % block['name'])
+                continue
             for item in block['data']:
                 keys = [t[1] for t in string.Formatter().parse(Names.FORMATS[block['name']]) if t[1] is not None]
                 # print(repr(item))
@@ -94,7 +96,10 @@ if __name__ == "__main__":
                         sheet_key = getattr(Names, key)
                     
                     if isinstance(item[sheet_key], float):
-                        description_values[key] = "%12.8f" % item[sheet_key]
+                        if "kcal/mol" in sheet_key: # sheet_key == Names.DG_COL or sheet_key == Names.DGACT_COL:
+                            description_values[key] = str(round(item[sheet_key], 3)) # Less digits for items in kcal/mol
+                        else:
+                            description_values[key] = str(round(item[sheet_key], 8))
                     else:
                         description_values[key] = item[sheet_key]
                 description = Names.FORMATS[block['name']].format(**description_values)
