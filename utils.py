@@ -516,6 +516,20 @@ def get_gaussian_scfener(filename, ignore_error_term=False):
             break
     return scf_e
 
+def get_gaussian_freeener(filename, ignore_error_term=False):
+    normal_termination = is_normal_termination(filename, '.gjf')
+    if ignore_error_term and not normal_termination:
+        return "Error"
+    assert normal_termination, "Abnormal termination of " + filename
+    
+    lines = open(filename, 'r').readlines()
+    ener = None
+    for line in reversed(lines):
+        if "Sum of electronic and thermal Free Energies=" in line:
+            ener = float(line.split("=")[1].strip())
+            break
+    return ener
+
 def get_goodvibes_g(filename, conc=1.0, ignore_error_term=False):
     normal_termination = is_normal_termination(filename, '.gjf')
     if ignore_error_term and not normal_termination:
