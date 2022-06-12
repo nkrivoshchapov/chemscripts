@@ -1,7 +1,7 @@
 from openpyxl import load_workbook, Workbook
 import openpyxl.utils as opxutils
 import xlcalculator as xlc
-
+import os
 
 def fix_xlsx(filename):
     excelsheet = ExcelSheet()
@@ -13,7 +13,7 @@ def fix_xlsx(filename):
                 if isinstance(item[key], str):
                     item[key] = item[key].replace('$', '')
     newname = filename.replace('.xlsx', '_fixed.xlsx')
-    excelsheet.save_xlsx(newname, oldfile=filename)
+    excelsheet.save_xlsx(newname, oldfile=filename, drop_dollars=True)
     return newname
 
 class ExcelSheet:
@@ -59,7 +59,7 @@ class ExcelSheet:
                 newitem[key] = None
         current_block['data'].append(newitem)
 
-    def save_xlsx(self, filename, oldfile=None):
+    def save_xlsx(self, filename, oldfile=None, drop_dollars=False):
         if oldfile is None:
             wb = Workbook()
             ws = wb.active
@@ -68,6 +68,13 @@ class ExcelSheet:
         else:
             wb = load_workbook(filename=oldfile)
             ws = wb.active
+            if drop_dollars:
+                vsize = ws.max_row
+                hsize = ws.max_column
+                for i in range(1, vsize + 2):
+                    for j in range(1, hsize + 2):
+                        if isinstance(ws.cell(i, j).value, str):
+                            ws.cell(i, j).value = ws.cell(i, j).value.replace('$', '')
 
         i = 1
         for datablock in self.datablocks:
@@ -88,15 +95,16 @@ class ExcelSheet:
         wb.save(filename)
 
     
-
     def read_xlsx(self, filename, get_values=False):
         self.datablocks = []
-
+        
+        mainfile = filename
         if get_values:
+            mainfile = fix_xlsx(filename)
             compiler = xlc.ModelCompiler()
-            new_model = compiler.read_and_parse_archive(filename)
+            new_model = compiler.read_and_parse_archive(mainfile)
             evaluator = xlc.Evaluator(new_model)
-        workbook = load_workbook(filename=filename)
+        workbook = load_workbook(filename=mainfile)
         ws = workbook.active
         sheetname = workbook.active.title
         vsize = ws.max_row
@@ -153,7 +161,11 @@ class ExcelSheet:
                           'cells': cells}
             self.datablocks.append(newsection)
             self.blocknames.append(section_name)
-
+        
+        if get_values:
+            print("Removing temporary file " + mainfile)
+            os.remove(mainfile)
+        
     @staticmethod
     def get_cell_name(row, col, sheetname):
         return "%s!%s%d" % (sheetname, opxutils.get_column_letter(col), row)
