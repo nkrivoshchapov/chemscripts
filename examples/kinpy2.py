@@ -36,11 +36,7 @@ if __name__ == "__main__":
         kin.obtain_barriers(excelsheet)
         excelsheet.save_xlsx(TABLENAME, oldfile=firstarg)
 
-        newtablename = xl.fix_xlsx(TABLENAME)
         excelsheet = xl.ExcelSheet()
-        excelsheet.read_xlsx(newtablename, get_values=True)
+        excelsheet.read_xlsx(TABLENAME, get_values=True)
         with open(SCRIPTNAME, "w") as f:
             f.write(kin.create_script(excelsheet))
-
-        print("Removing temporary file " + newtablename)
-        os.remove(newtablename)

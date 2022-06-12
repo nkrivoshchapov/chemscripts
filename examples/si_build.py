@@ -75,9 +75,8 @@ if __name__ == "__main__":
         excelsheet.save_xlsx(tablename.replace('.xlsx', '_enum.xlsx'), oldfile=tablename)
     elif sys.argv[1].endswith(".xlsx") and "build" in sys.argv:
         tablename = sys.argv[1]
-        newname = xl.fix_xlsx(tablename)
         excelsheet = xl.ExcelSheet()
-        excelsheet.read_xlsx(newname, get_values=True)
+        excelsheet.read_xlsx(tablename, get_values=True)
         print(repr(excelsheet.datablocks))
         xyzdata = [] # each element (string) corresponds to different structure
         for block in excelsheet.datablocks:
@@ -110,6 +109,3 @@ if __name__ == "__main__":
 
         with open(XYZ_FILENAME, 'w') as f:
             f.write('\n'.join(xyzdata))
-        
-        print("Removing temporary file " + newname)
-        os.remove(newname)
