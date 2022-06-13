@@ -10,10 +10,11 @@ import sys
 from ..utils import ELEMENT_NAMES, NAMES_ELEMENT, H2KC
 from .. import utils
 
-class RmsdPool:
+class RmsdPool: # TODO Implement sorting of this pool
     def __init__(self):
         self.structures = []
         self.energies = []
+        self.comments = []
         self.atom_ints = None
         self.atom_symbols = None
     
@@ -36,11 +37,23 @@ class RmsdPool:
     def atom_to_int(atom_sym):
         return NAMES_ELEMENT[atom_sym.capitalize()]
     
-    def add_structure(self, xyz, ener):
+    def _add_structure(self, xyz, ener, comment):
         self.structures.append(xyz)
         self.energies.append(ener)
+        self.comments.append(comment)
     
-    def include(self, xyzfile, energy_func=None):
+    def include_structure(self, xyz, sym, energy=None, comment=None):
+        if self.atom_symbols is not None:
+            assert self.atom_symbols == sym
+        else:
+            self.atom_symbols = sym
+            atom_ints = []
+            for atom in self.atom_symbols:
+                atom_ints.append(RmsdPool.atom_to_int(atom))
+            self.atom_ints = np.array(atom_ints)
+        self._add_structure(xyz, energy, comment)
+    
+    def include(self, xyzfile, energy_func=None, save_comment=False):
         lines = open(xyzfile, 'r').readlines()
         startline = lines[0]
         
@@ -54,12 +67,21 @@ class RmsdPool:
         if self.atom_symbols is not None:
             assert self.atom_symbols == symbols
         
-        minener = float(lines[1].replace('\n', ''))
+        # minener = float(lines[1].replace('\n', ''))
         for i, idx in enumerate(delimiters[:len(delimiters) - 1]):
+            comment = lines[idx + 1].replace('\n', '')
             if energy_func is not None:
-                energy = energy_func(lines[idx + 1])
+                energy = energy_func(comment)
+            else:
+                energy = None
+            
+            if save_comment:
+                mycomment = comment
+            else:
+                mycomment = None
+            
             structure = RmsdPool.struct_from_lines(lines[idx + 2:delimiters[i + 1]])
-            self.add_structure(structure, energy)
+            self._add_structure(structure, energy, comment=mycomment)
             assert symbols == RmsdPool.symbols_from_lines(lines[idx + 2:delimiters[i + 1]])
         
         if self.atom_symbols is None:
@@ -88,6 +110,7 @@ class RmsdPool:
                 # print("Removed")
                 del self.structures[i]
                 del self.energies[i]
+                del self.comments[i]
             i -= 1
     
     def distance_filter(self, first_atom, second_atom, keep_if):
@@ -99,12 +122,19 @@ class RmsdPool:
                 # print("Removed")
                 del self.structures[i]
                 del self.energies[i]
+                del self.comments[i]
             i -= 1
     
     def save(self, filename):
         parts = []
         for i, item in enumerate(self.structures):
-            parts.append(utils.to_xyz(item, self.atom_symbols, description="%14.6f"%self.energies[i]))
+            if self.comments[i] is not None:
+                comment = self.comments[i]
+            elif self.energies[i] is not None:
+                comment = "%14.6f"%self.energies[i]
+            else:
+                comment = ""
+            parts.append(utils.to_xyz(item, self.atom_symbols, description=comment))
         
         with open(filename, 'w') as f:
             f.write('\n'.join(parts))
@@ -126,6 +156,7 @@ class RmsdPool:
                 print("Match detected. RMSD = " + str(rmsd))
                 del self.structures[i]
                 del self.energies[i]
+                del self.comments[i]
             i -= 1
 
     @staticmethod
