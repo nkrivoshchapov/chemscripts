@@ -124,6 +124,16 @@ class RmsdPool: # TODO Implement sorting of this pool
                 del self.energies[i]
                 del self.comments[i]
             i -= 1
+            
+    def dihedral_filter(self, indices, keep_if):
+        i = len(self.energies) - 1
+        while i >= 0:
+            dihedral = utils.get_dihedral(atoms=indices, xyz=self.structures[i])
+            if not keep_if(dihedral):
+                del self.structures[i]
+                del self.energies[i]
+                del self.comments[i]
+            i -= 1
     
     def save(self, filename):
         parts = []
