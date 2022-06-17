@@ -147,6 +147,34 @@ def parse_irc(logname):
     return irc
 
 
+def parse_scan(logname):
+    scan_data = []
+    inplines = open(logname, "r").readlines()
+    prevpoint = -1
+    breaknext = len(inplines)-1
+    for line in reversed(inplines):
+        if "scan point" in line:
+            curpoint = int(line.split("point")[1].split("out")[0])
+            if curpoint == prevpoint:
+                continue
+            lines = inplines[inplines.index(line):breaknext]
+            xyz, sym = parse_geometry(lines)
+            scf_e = "NAN"
+            for line in reversed(lines):
+                if "SCF Done" in line:
+                    scf_e = float(line.split("=")[1].split("A.U.")[0])
+            # assert scf_e is not None, print("".join(lines))
+            newpoint = {
+                        'xyzs': xyz,
+                        'syms': sym,
+                        'scfener': scf_e,
+                        }
+            scan_data.append(newpoint)
+            breaknext = inplines.index(line)
+            prevpoint = curpoint
+    return list(reversed(scan_data))
+    
+    
 def write_gjf(xyzs, syms, template_name, filename, subs={}):
     xyz_parts = []
     for i in range(len(xyzs)):
