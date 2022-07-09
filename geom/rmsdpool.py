@@ -124,6 +124,14 @@ class RmsdPool: # TODO Implement sorting of this pool
                 del self.energies[i]
                 del self.comments[i]
             i -= 1
+    
+    def distance_count(self, first_atom, second_atom, crit):
+        count = 0
+        for struct in self.structures:
+            dist = utils.get_length((first_atom, second_atom), struct)
+            if crit(dist):
+                count += 1
+        return count
             
     def dihedral_filter(self, indices, keep_if):
         i = len(self.energies) - 1
@@ -141,7 +149,7 @@ class RmsdPool: # TODO Implement sorting of this pool
             if self.comments[i] is not None:
                 comment = self.comments[i]
             elif self.energies[i] is not None:
-                comment = "%14.6f"%self.energies[i]
+                comment = "%14.9f" % self.energies[i]
             else:
                 comment = ""
             parts.append(utils.to_xyz(item, self.atom_symbols, description=comment))
@@ -149,7 +157,7 @@ class RmsdPool: # TODO Implement sorting of this pool
         with open(filename, 'w') as f:
             f.write('\n'.join(parts))
 
-    def filter_rmsd(self, maxrmsd):
+    def filter_rmsd(self, maxrmsd, energy_thr=None):
         i = len(self.energies) - 1
         while i > 0:
             print("i = " + str(i))
@@ -157,9 +165,10 @@ class RmsdPool: # TODO Implement sorting of this pool
             j = i - 1
             while j >= 0:
                 testgeom = self.structures[j]
-                rmsd = RmsdPool.calc_rmsd(curgeom, testgeom, self.atom_ints)
-                if rmsd < maxrmsd:
-                    break
+                if energy_thr is None or abs(self.energies[i] - self.energies[j]) < energy_thr:
+                    rmsd = RmsdPool.calc_rmsd(curgeom, testgeom, self.atom_ints)
+                    if rmsd < maxrmsd:
+                        break
                 j -= 1
             
             if j != -1:
@@ -168,6 +177,9 @@ class RmsdPool: # TODO Implement sorting of this pool
                 del self.energies[i]
                 del self.comments[i]
             i -= 1
+
+    def energy_sort(self):
+        self.energies, self.structures, self.comments = map(list, zip(*sorted(zip(self.energies, self.structures, self.comments), key=lambda attrs: attrs[0])))
 
     @staticmethod
     def calc_rmsd(p_all, q_all, atom_syms, ignore_atom=None):  # All three args are numpy arrays
