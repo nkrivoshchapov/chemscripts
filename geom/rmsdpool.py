@@ -157,7 +157,7 @@ class RmsdPool: # TODO Implement sorting of this pool
         with open(filename, 'w') as f:
             f.write('\n'.join(parts))
 
-    def filter_rmsd(self, maxrmsd, energy_thr=None):
+    def filter_rmsd(self, maxrmsd, energy_thr=None, inversion=False):
         i = len(self.energies) - 1
         while i > 0:
             print("i = " + str(i))
@@ -166,7 +166,10 @@ class RmsdPool: # TODO Implement sorting of this pool
             while j >= 0:
                 testgeom = self.structures[j]
                 if energy_thr is None or abs(self.energies[i] - self.energies[j]) < energy_thr:
-                    rmsd = RmsdPool.calc_rmsd(curgeom, testgeom, self.atom_ints)
+                    if inversion:
+                        rmsd = RmsdPool.calc_rmsd_mirror(curgeom, testgeom, self.atom_ints)
+                    else:
+                        rmsd = RmsdPool.calc_rmsd(curgeom, testgeom, self.atom_ints)
                     if rmsd < maxrmsd:
                         break
                 j -= 1
@@ -227,3 +230,53 @@ class RmsdPool: # TODO Implement sorting of this pool
         res = np.sqrt((diff * diff).sum() / N)
         return res
     
+    @staticmethod
+    def _calc_rmsd_symm(p_all, q_all, atom_syms, ignore_atom=None):  # All three args are numpy arrays
+        if ignore_atom is not None: # TODO ignore_atoms from config
+            myview = np.where(atom_syms != ignore_atom)
+            p_coord = deepcopy(p_all[myview])
+            q_coord = deepcopy(q_all[myview])
+            atoms_view = deepcopy(atom_syms[myview])
+        else:
+            p_coord = deepcopy(p_all)
+            q_coord = deepcopy(q_all)
+            atoms_view = deepcopy(atom_syms)
+
+        #### THE ONLY DIFFERENCE - CREATE A REFLECTION
+        p_coord = -p_coord
+        ####
+        
+        p_cent = p_coord.mean(axis=0)
+        q_cent = q_coord.mean(axis=0)
+        p_coord -= p_cent
+        q_coord -= q_cent
+
+        unique_atoms = np.unique(atoms_view)
+        view_reorder = np.zeros(atoms_view.shape, dtype=int)
+        view_reorder -= 1
+        for atom in unique_atoms:
+            (atom_idx,) = np.where(atoms_view == atom)
+            A_coord = p_coord[atom_idx]
+            B_coord = q_coord[atom_idx]
+
+            distances = cdist(A_coord, B_coord, "euclidean")
+            indices_a, indices_b = linear_sum_assignment(distances)
+            view_reorder[atom_idx] = atom_idx[indices_b]
+        q_coord = q_coord[view_reorder]
+
+        C = np.dot(np.transpose(p_coord), q_coord)
+        V, S, W = np.linalg.svd(C)
+        d = (np.linalg.det(V) * np.linalg.det(W)) < 0.0
+        if d:
+            S[-1] = -S[-1]
+            V[:, -1] = -V[:, -1]
+        U = np.dot(V, W)
+        p_coord = np.dot(p_coord, U)
+        diff = np.array(p_coord) - np.array(q_coord)
+        N = len(p_coord)
+        res = np.sqrt((diff * diff).sum() / N)
+        return res
+    
+    @staticmethod
+    def calc_rmsd_mirror(p_all, q_all, atom_syms, ignore_atom=None):  # All three args are numpy arrays
+        return min(RmsdPool.calc_rmsd(p_all, q_all, atom_syms, ignore_atom), RmsdPool._calc_rmsd_symm(p_all, q_all, atom_syms, ignore_atom))
