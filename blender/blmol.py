@@ -295,14 +295,14 @@ class Bond:
         rot_matrix_x = rot_matrix_x/np.linalg.norm(rot_matrix_x)
         rot_matrix = [rot_matrix_x, rot_matrix_y, rot_matrix_z]
 
-        # ov = bpy.context.copy()
-        # ov['area'] = [a for a in bpy.context.screen.areas if a.type == "VIEW_3D"][0]
-        # bpy.ops.transform.rotate(ov, value=rot_angle, orient_axis='Z',
-        #                          orient_matrix=rot_matrix,
-        #                          constraint_axis=(False, False, True))
-        bpy.ops.transform.rotate(value=rot_angle, orient_axis='Z',
+        ov = bpy.context.copy()
+        ov['area'] = [a for a in bpy.context.screen.areas if a.type == "VIEW_3D"][0]
+        bpy.ops.transform.rotate(ov, value=rot_angle, orient_axis='Z',
                                  orient_matrix=rot_matrix,
                                  constraint_axis=(False, False, True))
+        # bpy.ops.transform.rotate(value=rot_angle, orient_axis='Z',
+        #                          orient_matrix=rot_matrix,
+        #                          constraint_axis=(False, False, True))
         bpy.ops.object.shade_smooth()
 
         if edge_split:
@@ -647,6 +647,23 @@ class Molecule:
             at1 = int(parts[0])
             at2 = int(parts[1])
             bondtype = int(parts[2])
+            if bondtype == 1:
+                self.add_bond(at1, at2, bondtype=BONDTYPE.NORMAL)
+            elif bondtype == 9:
+                self.add_bond(at1, at2, bondtype=BONDTYPE.DASHED)
+            else:
+                raise Exception(NotImplemented)
+    
+    def from_dict(self, scene_data):
+        for i in range(len(scene_data['xyz'])):
+            coords = np.array(scene_data['xyz'][i])
+            atnum = ATOMIC_NUMBERS[scene_data['symbols'][i].upper()]
+            self.add_atom(Atom(atnum, coords, i + 1, small=(i + 1) in self.small_atoms))
+        
+        for bond in scene_data['bonds']:
+            at1 = bond[0] + 1
+            at2 = bond[1] + 1
+            bondtype = 1
             if bondtype == 1:
                 self.add_bond(at1, at2, bondtype=BONDTYPE.NORMAL)
             elif bondtype == 9:

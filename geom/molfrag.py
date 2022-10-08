@@ -6,12 +6,12 @@ import copy
 from ..nbo import NBO3LogParser, NBO6LogParser
 
 class Molecule:
-    def __init__(self, sdf=None, nbolog=None):
+    def __init__(self, sdf=None, nbolog=None, shutup=False):
         if sdf is not None:
             self.readsdf(sdf)
         elif nbolog is not None:
             self.readnbotopology(nbolog) # Must read symbols and xyzs by calling 'from_xyz'
-        else:
+        elif not shutup:
             raise Exception("No args were given")
 
     def readsdf(self, file):
@@ -43,6 +43,36 @@ class Molecule:
         for bond in bonds:
             self.G.add_edge(bond[0] - 1, bond[1] - 1)
             self.G[bond[0] - 1][bond[1] - 1]['type'] = 1
+
+    def __add__(self, other):
+        res = Molecule(shutup=True)
+        res.G = nx.Graph()
+        maxnode = None
+        for node in self.G.nodes:
+            res.G.add_node(node)
+            res.G.nodes[node]['xyz'] = self.G.nodes[node]['xyz']
+            res.G.nodes[node]['symbol'] = self.G.nodes[node]['symbol']
+            if maxnode is None or maxnode < node:
+                maxnode = node
+
+        for edge in self.G.edges:
+            res.G.add_edge(edge[0], edge[1])
+            res.G[edge[0]][edge[1]]['type'] = self.G[edge[0]][edge[1]]['type']
+        
+        res.idx_map = {}
+        for node in other.G.nodes:
+            res.idx_map[node] = node + maxnode + 1
+        print("Other G has {} nodes".format(repr(list(other.G.nodes))))
+        for node in other.G.nodes:
+            nodeidx = res.idx_map[node]
+            res.G.add_node(nodeidx)
+            res.G.nodes[nodeidx]['xyz'] = other.G.nodes[node]['xyz']
+            res.G.nodes[nodeidx]['symbol'] = other.G.nodes[node]['symbol']
+
+        for edge in other.G.edges:
+            res.G.add_edge(res.idx_map[edge[0]], res.idx_map[edge[1]])
+            res.G[res.idx_map[edge[0]]][res.idx_map[edge[1]]]['type'] = other.G[edge[0]][edge[1]]['type']
+        return res
 
     def from_xyz(self, xyzs, syms):
         for i, xyz in enumerate(xyzs):
@@ -89,6 +119,9 @@ class Molecule:
         with open(sdfname, "w") as f:
             f.write("\n".join(lines))
     
+    def get_bonds(self):
+        return list(self.G.edges)
+
     def add_dummy(self, position):
         idx = self.G.number_of_nodes()
         self.G.add_node(idx)
@@ -104,14 +137,35 @@ class Molecule:
 
     def atom_xyz(self, idx):
         return self.G.nodes[idx - 1]['xyz']
+    
+    def keep_atoms(self, idxs):
+        for i in range(len(idxs)):
+            idxs[i] -= 1
+        for node in list(self.G.nodes):
+            if node not in idxs:
+                self.G.remove_node(node)
+        i = 0
+        relabel_mapping = {}
+        relabel_short = {}
+        node_names = sorted(list(self.G.nodes))
+        for i, node in enumerate(node_names):
+            relabel_mapping[node] = i
+            if node in idxs:
+                relabel_short[node + 1] = i + 1
+        self.G = nx.relabel_nodes(self.G, relabel_mapping, copy=False)
+        return relabel_short
 
 
 class Fragment:
     def __init__(self, mol, startatom, add_atoms=None):
-        self.carried_atoms = nx.node_connected_component(mol.G, startatom - 1) # Numbering of atoms starts from 0
-        if add_atoms is not None:
-            self.carried_atoms.update({i - 1 for i in add_atoms})
-        self.G = mol.G.subgraph(self.carried_atoms)
+        if startatom is None:
+            self.G = mol.G.subgraph(mol.G.nodes)
+            self.carried_atoms = list(mol.G.nodes)
+        else:
+            self.carried_atoms = nx.node_connected_component(mol.G, startatom - 1) # Numbering of atoms starts from 0
+            if add_atoms is not None:
+                self.carried_atoms.update({i - 1 for i in add_atoms})
+            self.G = mol.G.subgraph(self.carried_atoms)
         self.mol = mol
 
     def build_frame(self, central_atom, dir_atom, plane_atom):
