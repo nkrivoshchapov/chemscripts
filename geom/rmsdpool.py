@@ -180,7 +180,7 @@ class RmsdPool: # TODO Implement sorting of this pool
         with open(f"pair_{i}_{j}.xyz", 'w') as f:
             f.write('\n'.join(parts))
 
-    def deduce_topology(self, index, mult=1.0):
+    def deduce_topology(self, index, filename='check_topology', mult=1.0):
         self.G = nx.Graph()
         for i in range(len(self.atom_symbols)):
             self.G.add_node(i)
@@ -207,7 +207,7 @@ class RmsdPool: # TODO Implement sorting of this pool
                                            1))
         lines.append("M  END\n")
 
-        with open('mytopo.sdf', "w") as f:
+        with open(f'{filename}.sdf', "w") as f:
             f.write("\n".join(lines))
 
     def filter_rmsd(self, maxrmsd, energy_thr=None, ignore_elements=[]):
@@ -238,13 +238,13 @@ class RmsdPool: # TODO Implement sorting of this pool
                     best_isom = None
                     for n_iso, isom in enumerate(isomorphisms):
                         rmsd, p_coord, q_coord = RmsdPool.calc_rmsd_new(curgeom, testgeom, isom, simple_reorder, self.atom_ints)
-                        print(f"RMSD {i} - {j} ({n_iso})= {rmsd}")
+                        # print(f"RMSD {i} - {j} ({n_iso})= {rmsd}")
                         if minrmsd is None or rmsd < minrmsd:
                             minrmsd = rmsd
                             best_isom = n_iso
 
-                    rmsd, p_coord, q_coord = RmsdPool.calc_rmsd_new(curgeom, testgeom, isomorphisms[best_isom], simple_reorder, self.atom_ints)
-                    self.write_pair(rmsd, p_coord, q_coord, i, j)
+                    # rmsd, p_coord, q_coord = RmsdPool.calc_rmsd_new(curgeom, testgeom, isomorphisms[best_isom], simple_reorder, self.atom_ints)
+                    # self.write_pair(rmsd, p_coord, q_coord, i, j)
                     if rmsd < maxrmsd:
                         break
                 j -= 1
