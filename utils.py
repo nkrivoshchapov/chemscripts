@@ -30,6 +30,56 @@ def normal_mode_data(fname):
     data = parser.parse()
     return data.vibfreqs, data.vibdisps
 
+def parse_trajectory(fname):
+    lines = open(fname, 'r').readlines()
+    sepline = "TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ-TRJ"
+    parts = []
+    cur_part = []
+    reading = False
+    for line in lines:
+        if reading and sepline not in line:
+            cur_part.append(line)
+        if sepline in line:
+            reading = not reading
+            if len(cur_part) > 0:
+                parts.append(cur_part)
+                cur_part = []
+    
+    traj = []
+    vels = []
+    for i, part in enumerate(parts[1:]):
+        start = None
+        end = None
+        for i, line in enumerate(part):
+            if "Cartesian coordinates: (bohr)" in line:
+                start = i
+            elif "MW cartesian velocity: (sqrt(amu)*bohr/sec)" in line:
+                end = i
+                break
+        assert start is not None
+        assert end is not None
+
+        mygeom = []
+        for line in part[start+1:end]:
+            line = line.replace('X', '').replace('Y', '').replace('Z', '').replace('I', '').replace('D', 'E')
+            coords_parts = line.split('=')
+            mygeom.append([float(coords_parts[2]),
+                           float(coords_parts[3]),
+                           float(coords_parts[4])])
+        traj.append(mygeom)
+
+        myvel = []
+        for line in part[end+1:]:
+            if 'I=' not in line:
+                break
+            line = line.replace('X', '').replace('Y', '').replace('Z', '').replace('I', '').replace('D', 'E')
+            coords_parts = line.split('=')
+            myvel.append([float(coords_parts[2]),
+                          float(coords_parts[3]),
+                          float(coords_parts[4])])
+        assert len(mygeom) == len(myvel)
+        vels.append(myvel) 
+    return np.array(traj), np.array(vels)
 
 def parse_csv(filename, sep=None, use_pd=True):
     lines = open(filename, 'r').readlines()
