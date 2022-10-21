@@ -23,6 +23,14 @@ def is_int(inp):
         return False
 
 
+def normal_mode_data(fname):
+    import cclib
+
+    parser = cclib.io.ccopen(fname)
+    data = parser.parse()
+    return data.vibfreqs, data.vibdisps
+
+
 def parse_csv(filename, sep=None, use_pd=True):
     lines = open(filename, 'r').readlines()
     if sep is None and ',' in lines[1]:
