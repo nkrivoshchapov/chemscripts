@@ -281,7 +281,7 @@ def parse_gjf(file):
     return xyzs, syms
 
 
-def parse_geometry(rline, preamble="Standard orientation:"):
+def parse_gaussian_geometry(rline, preamble="Standard orientation:"):
     xyzs = []
     syms = []
 
@@ -428,12 +428,12 @@ def parse_geometry(rline, preamble="Standard orientation:"):
     return xyzs, syms
 
 
-def parse_log(logname, input_orientation=False):
+def parse_gaussian_log(logname, input_orientation=False):
     lines = open(logname,"r").readlines()
     if input_orientation:
-        return parse_geometry(lines, preamble="Input orientation:")
+        return parse_gaussian_geometry(lines, preamble="Input orientation:")
     else:
-        return parse_geometry(lines)
+        return parse_gaussian_geometry(lines)
 
 def parse_xyz(filename):
     lines = open(filename, "r").readlines()
