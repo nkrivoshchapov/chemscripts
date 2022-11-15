@@ -4,6 +4,7 @@ from numpy.linalg import inv, norm
 import copy
 
 from ..nbo import NBO3LogParser, NBO6LogParser
+from .rmsdpool import RADII
 
 class Molecule:
     def __init__(self, sdf=None, nbolog=None, shutup=False):
@@ -74,13 +75,27 @@ class Molecule:
             res.G[res.idx_map[edge[0]]][res.idx_map[edge[1]]]['type'] = other.G[edge[0]][edge[1]]['type']
         return res
 
-    def from_xyz(self, xyzs, syms):
-        for i, xyz in enumerate(xyzs):
-            self.G.nodes[i]['xyz'] = copy.deepcopy(xyz)
-            if 'symbol' in self.G.nodes[i]:
-                assert self.G.nodes[i]['symbol'] == syms[i]
-            else:
+    def from_xyz(self, xyzs, syms, mult=1.0):
+        if hasattr(self, 'G'):
+            for i, xyz in enumerate(xyzs):
+                self.G.nodes[i]['xyz'] = copy.deepcopy(xyz)
+                if 'symbol' in self.G.nodes[i]:
+                    assert self.G.nodes[i]['symbol'] == syms[i]
+                else:
+                    self.G.nodes[i]['symbol'] = syms[i]
+        else:
+            self.G = nx.Graph()
+            for i, xyz in enumerate(xyzs):
+                self.G.add_node(i)
+                self.G.nodes[i]['xyz'] = copy.deepcopy(xyz)
                 self.G.nodes[i]['symbol'] = syms[i]
+            
+            for nodeA in range(len(xyzs)):
+                for nodeB in range(nodeA):
+                    max_dist = mult * (RADII[syms[nodeA]] + RADII[syms[nodeB]])
+                    if norm(xyzs[nodeA] - xyzs[nodeB]) < max_dist:
+                        self.G.add_edge(nodeA, nodeB)
+                        self.G[nodeA][nodeB]['type'] = 1
 
     def as_xyz(self):
         xyzs = []

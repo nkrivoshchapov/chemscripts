@@ -19,7 +19,10 @@ RADII = {'H': 0.31, 'He': 0.28, 'Li': 1.28, 'Be': 0.96, 'B': 0.84, 'C': 0.69, 'N
 def same_element(n1_attrib, n2_attrib):
     return n1_attrib['symbol'] == n2_attrib['symbol']
 
-class RmsdPool: # TODO Implement sorting of this pool
+"""
+WARNING The code below contains bugs in filter_rmsd method. Use https://gitlab.com/knvvv/pyxyz instead
+"""
+class RmsdPool:
     def __init__(self):
         self.structures = []
         self.energies = []
