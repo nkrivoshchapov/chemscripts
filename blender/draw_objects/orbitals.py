@@ -74,7 +74,7 @@ def plot_nbo(nboname, color="#377eb8", reverse=False, nbodir="./calcfiles", alig
     files = get_mcubes_templates(nboname, nbodir)
     # print(repr(files))
     if len(files) > 2 or len(files) < 1:
-        raise Exception("Unexpected number of %s_*.wrl files" % nboname)
+        raise Exception("Unexpected number of %s_*.iso files" % nboname)
 
     if isinstance(color, str):
         plusmat = get_orbital_material(color, 1)
