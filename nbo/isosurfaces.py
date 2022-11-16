@@ -1,5 +1,5 @@
 import numpy as np
-import mcubes, sklearn.decomposition
+import sklearn.decomposition
 import glob, os
 
 from chemscripts.utils import wait_for_termination
@@ -58,6 +58,7 @@ def generate_nbo_cube(logname, fchkname, cubename, nbo_indices, gdriver, logger,
 
 BOHR2A = 0.529177
 def generate_isosurface(cubename, meshfile_template, ival):
+    import mcubes
     cubelines = open(cubename, 'r').readlines()[2:] # First two lines are comments
     fline_parts = cubelines[0].split()
     natoms = int(fline_parts[0])
