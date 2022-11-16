@@ -196,6 +196,7 @@ class Atom:
         # Create sphere as bmesh.
         bm = bmesh.new()
         if bpy.app.version > (3, 0, 0):
+            print("SPHERE CREATED")
             bmesh.ops.create_uvsphere(bm,
                                     u_segments=segments,
                                     v_segments=segments,
@@ -222,9 +223,9 @@ class Atom:
         atom_sphere.location = loc_corr
 
         # Assign subsurface modifier, if requested
-        if subsurf_level != 0:
-            atom_sphere.modifiers.new('Subsurf', 'SUBSURF')
-            atom_sphere.modifiers['Subsurf'].levels = subsurf_level
+        # if subsurf_level != 0:
+            # atom_sphere.modifiers.new('Subsurf', 'SUBSURF')
+            # atom_sphere.modifiers['Subsurf'].levels = subsurf_level
 
         # Color atom and assign material
         if color == 'by_element':
@@ -587,7 +588,7 @@ class Molecule:
 
         # End progress monitor.
         bpy.context.window_manager.progress_end()
-
+        
         if join:
             # Deselect all objects in scene.
             for obj in bpy.context.selected_objects:
@@ -599,7 +600,7 @@ class Molecule:
             bpy.context.view_layer.objects.active = created_objects[0]
             bpy.ops.object.join()
             bpy.context.object.name = self.name + '_atoms'
-
+            
         print("{} seconds".format(time.time()-start_time))
         return
 
