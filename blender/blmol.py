@@ -195,10 +195,16 @@ class Atom:
 
         # Create sphere as bmesh.
         bm = bmesh.new()
-        bmesh.ops.create_uvsphere(bm,
-                                  u_segments=segments,
-                                  v_segments=segments,
-                                  diameter=rad_adj/2)
+        if bpy.app.version > (3, 0, 0):
+            bmesh.ops.create_uvsphere(bm,
+                                    u_segments=segments,
+                                    v_segments=segments,
+                                    radius=rad_adj/2)
+        else:
+            bmesh.ops.create_uvsphere(bm,
+                                    u_segments=segments,
+                                    v_segments=segments,
+                                    diameter=rad_adj/2)
 
         for f in bm.faces:
             f.smooth = True
