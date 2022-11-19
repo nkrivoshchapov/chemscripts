@@ -46,7 +46,7 @@ def gauss_driver(todo_files, todo_lock, done_files, done_lock, maxproc):
                     print("Not normal termination of " + procs[i]['logfile'])
                     if type(procs[i]['inpfile']) is dict:
                         ntries_key = procs[i]['inpfile']['command']
-                        print("The task was '{}'".format(procs[i]['command']))
+                        print("The task was '{}'".format(procs[i]['inpfile']['command']))
                     else:
                         ntries_key = procs[i]['inpfile']
                     
