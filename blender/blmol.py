@@ -196,7 +196,6 @@ class Atom:
         # Create sphere as bmesh.
         bm = bmesh.new()
         if bpy.app.version > (3, 0, 0):
-            print("SPHERE CREATED")
             bmesh.ops.create_uvsphere(bm,
                                     u_segments=segments,
                                     v_segments=segments,
