@@ -653,12 +653,13 @@ class Molecule:
             at1 = int(parts[0])
             at2 = int(parts[1])
             bondtype = int(parts[2])
-            if bondtype == 1:
-                self.add_bond(at1, at2, bondtype=BONDTYPE.NORMAL)
-            elif bondtype == 9:
+            if bondtype != 1 and bondtype != 9:
+                print("[WARNING] Only single and dashed bonds are implemented. Everything else will be rendered as single bonds!")
+            
+            if bondtype == 9:
                 self.add_bond(at1, at2, bondtype=BONDTYPE.DASHED)
             else:
-                raise Exception(NotImplemented)
+                self.add_bond(at1, at2, bondtype=BONDTYPE.NORMAL)
     
     def from_dict(self, scene_data):
         for i in range(len(scene_data['xyz'])):
@@ -670,9 +671,4 @@ class Molecule:
             at1 = bond[0] + 1
             at2 = bond[1] + 1
             bondtype = 1
-            if bondtype == 1:
-                self.add_bond(at1, at2, bondtype=BONDTYPE.NORMAL)
-            elif bondtype == 9:
-                self.add_bond(at1, at2, bondtype=BONDTYPE.DASHED)
-            else:
-                raise Exception(NotImplemented)
+            self.add_bond(at1, at2, bondtype=BONDTYPE.NORMAL)
