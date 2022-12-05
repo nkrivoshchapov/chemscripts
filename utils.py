@@ -616,14 +616,14 @@ def get_gaussian_freeener(filename, ignore_error_term=False):
             break
     return ener
 
-def get_goodvibes_g(filename, conc=1.0, ignore_error_term=False):
+def get_goodvibes_g(filename, conc=1.0, ignore_error_term=False, gv_flags=[]):
     normal_termination = is_normal_termination(filename, '.gjf')
     if ignore_error_term and not normal_termination:
         return "Error"
     assert normal_termination, "Abnormal Gaussian termination detected!"
 
     print("Doing GoodVibes calc for " + filename)
-    sseq = ['python','-m','goodvibes','-q','-t 273.15','-c %f' % conc,'--invertifreq=-15', filename]
+    sseq = ['python','-m','goodvibes','-q','-t 273.15','-c %f' % conc,'--invertifreq=-15', filename] + gv_flags
     print("Command line: " + " ".join(sseq))
     out = subprocess.run(sseq, stdout=subprocess.PIPE)
     outlines = str(out.stdout).split("\\n")
