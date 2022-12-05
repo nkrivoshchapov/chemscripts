@@ -461,6 +461,12 @@ def is_normal_termination(logname, inpfile):
             if "Normal termination" in line:
                 return True
         return False
+    elif inpfile.endswith(".inp"):
+        lines = open(logname, 'r').readlines()
+        for line in lines[-3:]:
+            if "****ORCA TERMINATED NORMALLY****" in line:
+                return True
+        return False
     elif inpfile.endswith(".47") and logname.endswith("_NBO.out"):
         return os.path.isfile(logname)
 
@@ -599,6 +605,20 @@ def get_gaussian_scfener(filename, ignore_error_term=False):
     for line in reversed(lines):
         if "SCF Done" in line:
             scf_e = float(line.split("=")[1].split("A.U.")[0])
+            break
+    return scf_e
+
+def get_orca_scfener(filename, ignore_error_term=False):
+    normal_termination = is_normal_termination(filename, '.inp')
+    if ignore_error_term and not normal_termination:
+        return "Error"
+    assert normal_termination, "Abnormal termination of " + filename
+    
+    lines = open(filename, 'r').readlines()
+    scf_e = None
+    for line in reversed(lines):
+        if "FINAL SINGLE POINT ENERGY" in line:
+            scf_e = float(line.split("ENERGY")[1].strip())
             break
     return scf_e
 
